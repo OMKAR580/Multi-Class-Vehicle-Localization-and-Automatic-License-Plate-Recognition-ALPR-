@@ -25,9 +25,11 @@ jobs:
         run: |
           flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
       - name: Run Backend Tests
+        env:
+          PYTHONPATH: backend
         run: |
           cd backend
-          pytest
+          python -m pytest tests/
 
   ai-checks:
     name: AI Package & Import Checks
@@ -44,10 +46,11 @@ jobs:
           pip install -r ai/requirements.txt
           pip install pytest
       - name: Verify AI Imports & Contract Tests
+        env:
+          PYTHONPATH: .
         run: |
-          cd ai
-          python -c "import pipeline.alpr_pipeline; print('AI Pipeline modules imported successfully')"
-          pytest tests/
+          python -c "import ai.pipeline.alpr_pipeline; print('AI Pipeline modules imported successfully')"
+          python -m pytest ai/tests/ tests/
 
   frontend-checks:
     name: Frontend Lint & Build
@@ -63,7 +66,7 @@ jobs:
       - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm ci
+          npm install
       - name: Build Next.js Application
         run: |
           cd frontend
