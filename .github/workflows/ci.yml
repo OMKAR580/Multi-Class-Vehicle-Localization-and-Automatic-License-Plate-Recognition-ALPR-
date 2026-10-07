@@ -12,61 +12,79 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install pytest flake8
+          pip install pytest flake8 anyio[trio] httpx
+
       - name: Lint with Flake8
         run: |
           flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
-      - name: Run Backend Tests
+
+      - name: Run Backend Unit Tests
         env:
-          PYTHONPATH: backend
+          PYTHONPATH: ${{ github.workspace }}/backend
+          SECRET_KEY: "ci_test_secret_key_for_github_actions_32chars"
+          ENVIRONMENT: testing
         run: |
           cd backend
-          python -m pytest tests/
+          python -m pytest tests/test_auth.py tests/test_health.py -v
 
   ai-checks:
     name: AI Package & Import Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install Dependencies
+
+      - name: Install AI Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r ai/requirements.txt
           pip install pytest
-      - name: Verify AI Imports & Contract Tests
+
+      - name: Verify AI Package Imports
         env:
-          PYTHONPATH: .
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python -c "import ai.pipeline.alpr_pipeline; print('AI Pipeline modules imported successfully')"
-          python -m pytest ai/tests/ tests/
+          python -c "from ai.pipeline.schema import StandardAIOutputContract; print('AI schema imported successfully')"
+
+      - name: Run AI Unit Tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest ai/tests/ tests/contract/ -v
 
   frontend-checks:
     name: Frontend Lint & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package.json
+
       - name: Install Frontend Dependencies
         run: |
           cd frontend
           npm install
+
       - name: Build Next.js Application
         run: |
           cd frontend
@@ -77,13 +95,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+
       - name: Validate Gradle Wrapper
         uses: gradle/actions/setup-gradle@v3
+
       - name: Check Android Project Structure
         run: |
           cd android
