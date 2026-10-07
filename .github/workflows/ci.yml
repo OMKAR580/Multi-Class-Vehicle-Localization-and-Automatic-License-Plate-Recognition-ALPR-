@@ -30,12 +30,11 @@ jobs:
 
       - name: Run Backend Unit Tests
         env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-          SECRET_KEY: "ci_test_secret_key_for_github_actions_32chars"
+          SECRET_KEY: "ci_test_secret_key_for_github_actions_minimum_32"
           ENVIRONMENT: testing
         run: |
           cd backend
-          python -m pytest tests/test_auth.py tests/test_health.py -v
+          python -m pytest tests/ -v --tb=short
 
   ai-checks:
     name: AI Package & Import Checks
