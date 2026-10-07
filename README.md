@@ -1,6 +1,6 @@
 # Multi-Class Vehicle Localization and Automatic License Plate Recognition (ALPR)
 
-[![CI Pipeline](https://github.com/your-org/vehicle-alpr-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/vehicle-alpr-platform/actions)
+[![CI Pipeline](https://github.com/OMKAR580/Multi-Class-Vehicle-Localization-and-Automatic-License-Plate-Recognition-ALPR-/actions/workflows/ci.yml/badge.svg)](https://github.com/OMKAR580/Multi-Class-Vehicle-Localization-and-Automatic-License-Plate-Recognition-ALPR-/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Project Deadline](https://img.shields.io/badge/Target_Deadline-12_Nov_2026-amber)](https://github.com)
 
