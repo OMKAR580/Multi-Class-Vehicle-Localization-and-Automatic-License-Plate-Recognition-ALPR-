@@ -1,0 +1,84 @@
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Python / Backend / AI
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.nox/
+.hypothesis/
+.venv
+venv/
+ENV/
+ai/models/*.pt
+ai/models/*.onnx
+ai/models/*.engine
+ai/models/*.safetensors
+
+# Node / Next.js / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.npm
+.eslintcache
+frontend/next-env.d.ts
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+android/local.properties
+*.apk
+*.aab
+
+# Database / Redis Data
+*.sqlite3
+*.db
+postgres-data/
+redis-data/
+
+# Docker
+docker-compose.override.yml
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

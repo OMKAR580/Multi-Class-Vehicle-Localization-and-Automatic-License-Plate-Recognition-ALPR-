@@ -1,0 +1,32 @@
+name: AI / ML Experiment
+description: Track machine learning experiments, model training hypotheses, and OCR benchmarks
+title: "[EXP]: "
+labels: ["ai-ml", "experiment"]
+body:
+  - type: input
+    id: model_type
+    attributes:
+      label: Model / Subsystem
+      description: e.g., YOLOv8 Vehicle Detector, Plate Detector, PaddleOCR / Tesseract
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Experiment Hypothesis
+      description: What are we testing or improving? (e.g. data augmentation for Indian high-contrast plates)
+    validations:
+      required: true
+  - type: textarea
+    id: dataset
+    attributes:
+      label: Dataset / Validation Set Used
+    validations:
+      required: true
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Target Evaluation Metrics
+      description: Expected mAP@50, Precision, Recall, Character Error Rate (CER)
+    validations:
+      required: true

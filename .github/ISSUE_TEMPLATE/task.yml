@@ -1,0 +1,25 @@
+name: Engineering Task
+description: Track internal development tasks and roadmap items
+title: "[TASK]: "
+labels: ["task"]
+body:
+  - type: input
+    id: assignee
+    attributes:
+      label: Primary Assignee / Team Member
+    validations:
+      required: false
+  - type: textarea
+    id: scope
+    attributes:
+      label: Task Scope & Objectives
+      description: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: List measurable criteria to mark this task complete.
+    validations:
+      required: true
