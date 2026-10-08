@@ -1,14 +1,22 @@
 import secrets
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Multi-Class Vehicle Localization and ALPR Platform"
+    APP_NAME: str = "VisionPlate AI Backend"
+    APP_VERSION: str = "0.1.0"
+    PROJECT_NAME: str = "VisionPlate AI Backend"
     ENVIRONMENT: Literal["development", "testing", "production"] = "development"
+    DEBUG: bool = False
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    API_V1_PREFIX: str = "/api/v1"
     API_V1_STR: str = "/api/v1"
 
     # Authentication configuration is consumed by existing routes. Development and
@@ -44,7 +52,7 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", str(REPOSITORY_ROOT / ".env")),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
@@ -62,6 +70,10 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production":
             if not self.SECRET_KEY:
                 raise ValueError("SECRET_KEY must be set in production")
+            if self.SECRET_KEY.startswith("change_this"):
+                raise ValueError(
+                    "SECRET_KEY must not use the example placeholder in production"
+                )
             if "*" in self.CORS_ORIGINS:
                 raise ValueError("CORS_ORIGINS must not contain '*' in production")
         elif not self.SECRET_KEY:
