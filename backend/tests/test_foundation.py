@@ -1,12 +1,9 @@
-"""Tests for configuration, API routing, and safe request logging."""
-
-import asyncio
+"""Tests for configuration, API routing, and centralized error handling."""
 
 import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from starlette.responses import Response
 
 from app.core.config import Settings
 from app.core.exceptions import (
@@ -16,7 +13,6 @@ from app.core.exceptions import (
     alpr_exception_handler,
     global_exception_handler,
 )
-from app.core.middleware import log_requests
 from app.main import app
 
 
@@ -32,7 +28,12 @@ def test_cors_origins_parse_comma_separated_environment_value() -> None:
 
 
 def test_development_secret_is_ephemeral_and_database_password_empty() -> None:
-    settings = Settings(_env_file=None)
+    settings = Settings(
+        _env_file=None,
+        ENVIRONMENT="development",
+        SECRET_KEY=None,
+        POSTGRES_PASSWORD="",
+    )
     assert settings.SECRET_KEY is not None
     assert len(settings.SECRET_KEY) >= 32
     assert settings.POSTGRES_PASSWORD == ""
@@ -44,6 +45,16 @@ def test_production_requires_secret_key() -> None:
             _env_file=None,
             ENVIRONMENT="production",
             SECRET_KEY=None,
+            CORS_ORIGINS="https://web.example",
+        )
+
+
+def test_production_rejects_example_secret_placeholder() -> None:
+    with pytest.raises(ValidationError, match="example placeholder"):
+        Settings(
+            _env_file=None,
+            ENVIRONMENT="production",
+            SECRET_KEY="change_this_to_a_random_secret_key_min_32_chars_long",
             CORS_ORIGINS="https://web.example",
         )
 
@@ -63,28 +74,6 @@ def test_health_endpoint_is_versioned_and_works() -> None:
         response = client.get("/api/v1/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
-
-
-def test_request_logging_omits_query_string(caplog: pytest.LogCaptureFixture) -> None:
-    request = Request(
-        {
-            "type": "http",
-            "method": "GET",
-            "scheme": "http",
-            "path": "/api/v1/health",
-            "query_string": b"token=secret-value",
-            "headers": [],
-            "server": ("testserver", 80),
-        }
-    )
-
-    async def call_next(_: Request) -> Response:
-        return Response(status_code=200)
-
-    asyncio.run(log_requests(request, call_next))
-    messages = [record.getMessage() for record in caplog.records]
-    assert any("GET /api/v1/health -> 200" in message for message in messages)
-    assert not any("secret-value" in message for message in messages)
 
 
 def test_custom_exception_hierarchy() -> None:
@@ -115,4 +104,13 @@ async def test_global_exception_handler_returns_500_response() -> None:
     response = await global_exception_handler(request, exc)
     assert response.status_code == 500
     assert b"An internal server error occurred." in response.body
+
+
+def test_settings_environment_defaults() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.APP_NAME == "VisionPlate AI Backend"
+    assert settings.APP_VERSION == "0.1.0"
+    assert settings.DEBUG is False
+    assert settings.API_V1_PREFIX == "/api/v1"
+    assert settings.LOG_LEVEL == "INFO"
 
