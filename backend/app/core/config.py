@@ -1,52 +1,80 @@
-import os
-from typing import List, Union
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import secrets
+from typing import Annotated, Literal
+
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Multi-Class Vehicle Localization and ALPR Platform"
-    ENVIRONMENT: str = "development"
-    LOG_LEVEL: str = "INFO"
+    ENVIRONMENT: Literal["development", "testing", "production"] = "development"
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     API_V1_STR: str = "/api/v1"
-    
-    # Security
-    SECRET_KEY: str = Field(default="dev_secret_key_must_be_changed_in_production_32chars_min", min_length=32)
+
+    # Authentication configuration is consumed by existing routes. Development and
+    # test runs get an ephemeral key; production must provide its own stable key.
+    SECRET_KEY: str | None = Field(default=None, min_length=32)
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    
-    # CORS
-    CORS_ORIGINS: Union[str, List[str]] = "http://localhost:3000,http://127.0.0.1:3000"
-    
-    # Database
+
+    # Comma-separated values from the environment are normalized into a list.
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ]
+    )
+
+    # Database settings remain available to existing code; no password is embedded.
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "vehicle_alpr"
     POSTGRES_USER: str = "alpr_admin"
-    POSTGRES_PASSWORD: str = "alpr_secret_password"
+    POSTGRES_PASSWORD: str = ""
     DATABASE_URL: str | None = None
-    
-    # Redis
+
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = ""
-    
-    # OAuth Providers
+
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"
+        extra="ignore",
     )
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @model_validator(mode="after")
+    def validate_security_settings(self) -> "Settings":
+        if self.ENVIRONMENT == "production":
+            if not self.SECRET_KEY:
+                raise ValueError("SECRET_KEY must be set in production")
+            if "*" in self.CORS_ORIGINS:
+                raise ValueError("CORS_ORIGINS must not contain '*' in production")
+        elif not self.SECRET_KEY:
+            self.SECRET_KEY = secrets.token_urlsafe(32)
+        return self
 
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
 
 settings = Settings()
