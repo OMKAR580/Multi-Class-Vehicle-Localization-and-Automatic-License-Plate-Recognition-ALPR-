@@ -1,3 +1,21 @@
-from app.api.v1.health import check_health, router
+from fastapi import APIRouter
+from app.core.config import settings
+from app.schemas.health import HealthResponse
 
-__all__ = ["router", "check_health"]
+router = APIRouter()
+
+
+@router.get("/health", response_model=HealthResponse, tags=["Health"])
+async def check_health() -> HealthResponse:
+    """Service Health Check Endpoint.
+
+    Returns machine-readable status and non-sensitive operational metadata.
+    """
+    return HealthResponse(
+        status="healthy",
+        version=settings.APP_VERSION,
+        environment=settings.ENVIRONMENT,
+        database="configured",
+        redis="configured",
+    )
+

@@ -1,11 +1,13 @@
 import secrets
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import quote_plus
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
+BACKEND_DIR = Path(__file__).resolve().parents[2]
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -52,7 +54,7 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=(".env", str(REPOSITORY_ROOT / ".env")),
+        env_file=(".env", str(BACKEND_DIR / ".env"), str(REPOSITORY_ROOT / ".env")),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
@@ -83,8 +85,10 @@ class Settings(BaseSettings):
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
+        user = quote_plus(self.POSTGRES_USER)
+        password = quote_plus(self.POSTGRES_PASSWORD)
         return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"postgresql+asyncpg://{user}:{password}"
             f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
