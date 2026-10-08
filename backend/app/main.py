@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import logger
+from app.core.middleware import log_requests
 from app.core.exceptions import ALPRPlatformException, alpr_exception_handler, global_exception_handler
 from app.api.v1.router import api_router
 
@@ -31,6 +32,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Request Logging Middleware
+app.middleware("http")(log_requests)
 
 # Exception Handlers
 app.add_exception_handler(ALPRPlatformException, alpr_exception_handler)
