@@ -62,3 +62,29 @@ class VideoRecognitionResponse(BaseModel):
     frames: List[VideoFrameResult] = Field(default_factory=list, description="Frame-by-frame ALPR detection results.")
     error_message: Optional[str] = Field(None, description="Detailed error description if execution failed.")
     created_at: datetime = Field(..., description="Detection job creation timestamp.")
+
+
+class RecognitionHistoryItem(BaseModel):
+    """Summary item representation for recognition history listing."""
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    job_id: str = Field(..., description="Unique detection job identifier (UUID).")
+    media_type: str = Field(..., description="Media asset type ('image', 'video').")
+    media_url: str = Field(..., description="Storage key or path of the processed media asset.")
+    status: str = Field(..., description="Job execution status ('COMPLETED', 'FAILED', 'PENDING').")
+    processing_time_ms: Optional[float] = Field(None, description="Inference runtime in milliseconds.")
+    error_message: Optional[str] = Field(None, description="Error message if execution failed.")
+    vehicle_count: int = Field(0, description="Total number of vehicles detected across media asset.")
+    plate_count: int = Field(0, description="Total number of license plates detected across media asset.")
+    created_at: datetime = Field(..., description="Job creation timestamp.")
+
+
+class RecognitionHistoryResponse(BaseModel):
+    """Paginated response container for recognition history listing."""
+
+    items: List[RecognitionHistoryItem] = Field(default_factory=list, description="Page list of recognition jobs.")
+    total: int = Field(..., description="Total matching detection jobs count.")
+    page: int = Field(..., description="Current page number (1-indexed).")
+    page_size: int = Field(..., description="Items per page.")
+    total_pages: int = Field(..., description="Total available pages.")

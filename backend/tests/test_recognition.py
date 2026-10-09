@@ -811,3 +811,343 @@ def test_openapi_video_routes_registered(client_with_deps: TestClient):
     assert "post" in schema["paths"]["/api/v1/recognition/videos"]
     assert "/api/v1/recognition/videos/{job_id}" in schema["paths"]
     assert "get" in schema["paths"]["/api/v1/recognition/videos/{job_id}"]
+
+
+# ==============================================================================
+# 6. Issue #8 — Recognition History & Results API Tests
+# ==============================================================================
+
+
+def test_recognition_history_unauthenticated_returns_401(client_with_deps: TestClient):
+    """GET /api/v1/recognition/history without token returns 401 Unauthorized."""
+    response = client_with_deps.get("/api/v1/recognition/history")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_recognition_history_empty_returns_200_empty_list(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """User with no recognition jobs receives empty items list and total=0."""
+    user, _ = await seed_user_and_file(db_session, test_storage)
+    token = create_access_token(subject=user.id)
+
+    response = client_with_deps.get(
+        "/api/v1/recognition/history",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["page"] == 1
+    assert data["total_pages"] == 0
+
+
+@pytest.mark.asyncio
+async def test_recognition_history_pagination_and_ordering(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """Recognition history supports pagination and orders jobs newest first."""
+    user, file_meta = await seed_user_and_file(db_session, test_storage)
+    token = create_access_token(subject=user.id)
+
+    fake_pipeline = ALPRPipeline(
+        vehicle_detector=FakeVehicleDetector(),
+        plate_detector=FakePlateDetector(),
+        ocr_engine=FakeOCR(),
+        cleaner=FakeCleaner(),
+    )
+
+    # Create 3 image recognition jobs
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.services.recognition_service.ALPRPipeline", lambda: fake_pipeline)
+        for _ in range(3):
+            client_with_deps.post(
+                "/api/v1/recognition/images",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"file_id": file_meta.id},
+            )
+
+    # Query page 1 with page_size=2
+    response_p1 = client_with_deps.get(
+        "/api/v1/recognition/history?page=1&page_size=2",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response_p1.status_code == 200
+    data_p1 = response_p1.json()
+    assert data_p1["total"] == 3
+    assert data_p1["page"] == 1
+    assert data_p1["page_size"] == 2
+    assert data_p1["total_pages"] == 2
+    assert len(data_p1["items"]) == 2
+
+    # Query page 2 with page_size=2
+    response_p2 = client_with_deps.get(
+        "/api/v1/recognition/history?page=2&page_size=2",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response_p2.status_code == 200
+    data_p2 = response_p2.json()
+    assert len(data_p2["items"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_recognition_history_media_type_filtering(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """History supports media_type filtering ('image' vs 'video')."""
+    vid_bytes = create_test_video_bytes()
+    user, file_img = await seed_user_and_file(db_session, test_storage, email="filter_user_1@vehiclevision.ai")
+    _, file_vid = await seed_user_and_file(
+        db_session, test_storage, email="filter_user_2@vehiclevision.ai", filename="clip.mp4", mime_type="video/mp4", img_bytes=vid_bytes
+    )
+    file_vid.uploaded_by_user_id = user.id
+    db_session.add(file_vid)
+    await db_session.commit()
+    token = create_access_token(subject=user.id)
+
+    fake_pipeline = ALPRPipeline(
+        vehicle_detector=FakeVehicleDetector(),
+        plate_detector=FakePlateDetector(),
+        ocr_engine=FakeOCR(),
+        cleaner=FakeCleaner(),
+    )
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.services.recognition_service.ALPRPipeline", lambda: fake_pipeline)
+        # Create 1 image job and 1 video job
+        client_with_deps.post(
+            "/api/v1/recognition/images",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"file_id": file_img.id},
+        )
+        client_with_deps.post(
+            "/api/v1/recognition/videos",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"file_id": file_vid.id},
+        )
+
+    # Filter media_type=image
+    resp_img = client_with_deps.get(
+        "/api/v1/recognition/history?media_type=image",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp_img.status_code == 200
+    data_img = resp_img.json()
+    assert data_img["total"] == 1
+    assert data_img["items"][0]["media_type"] == "image"
+
+    # Filter media_type=video
+    resp_vid = client_with_deps.get(
+        "/api/v1/recognition/history?media_type=video",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp_vid.status_code == 200
+    data_vid = resp_vid.json()
+    assert data_vid["total"] == 1
+    assert data_vid["items"][0]["media_type"] == "video"
+
+
+@pytest.mark.asyncio
+async def test_recognition_history_invalid_filter_params_returns_400(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """Invalid media_type or status filter returns 400 Bad Request."""
+    user, _ = await seed_user_and_file(db_session, test_storage)
+    token = create_access_token(subject=user.id)
+
+    response = client_with_deps.get(
+        "/api/v1/recognition/history?media_type=audio",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 400
+    assert "Invalid media_type filter" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_recognition_history_user_isolation(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """User A sees only User A's jobs in history; User B's jobs are not accessible."""
+    user_a, file_a = await seed_user_and_file(db_session, test_storage, email="user_hist_a@vehiclevision.ai")
+    user_b, file_b = await seed_user_and_file(db_session, test_storage, email="user_hist_b@vehiclevision.ai")
+
+    token_a = create_access_token(subject=user_a.id)
+    token_b = create_access_token(subject=user_b.id)
+
+    fake_pipeline = ALPRPipeline(
+        vehicle_detector=FakeVehicleDetector(),
+        plate_detector=FakePlateDetector(),
+        ocr_engine=FakeOCR(),
+        cleaner=FakeCleaner(),
+    )
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.services.recognition_service.ALPRPipeline", lambda: fake_pipeline)
+        # Create job for User A and job for User B
+        client_with_deps.post(
+            "/api/v1/recognition/images",
+            headers={"Authorization": f"Bearer {token_a}"},
+            json={"file_id": file_a.id},
+        )
+        client_with_deps.post(
+            "/api/v1/recognition/images",
+            headers={"Authorization": f"Bearer {token_b}"},
+            json={"file_id": file_b.id},
+        )
+
+    # User A requests history
+    resp_a = client_with_deps.get(
+        "/api/v1/recognition/history",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert resp_a.status_code == 200
+    data_a = resp_a.json()
+    assert data_a["total"] == 1
+
+    # User B requests history
+    resp_b = client_with_deps.get(
+        "/api/v1/recognition/history",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp_b.status_code == 200
+    data_b = resp_b.json()
+    assert data_b["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_recognition_job_detail_success_image(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """GET /api/v1/recognition/history/{job_id} returns image recognition job detail."""
+    user, file_meta = await seed_user_and_file(db_session, test_storage)
+    token = create_access_token(subject=user.id)
+
+    fake_pipeline = ALPRPipeline(
+        vehicle_detector=FakeVehicleDetector([
+            {"type": "car", "confidence": 0.95, "bbox": [50, 50, 400, 300]}
+        ]),
+        plate_detector=FakePlateDetector([100, 100, 250, 150]),
+        ocr_engine=FakeOCR("DL01AB1234", 0.98),
+        cleaner=FakeCleaner(),
+    )
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.services.recognition_service.ALPRPipeline", lambda: fake_pipeline)
+        post_resp = client_with_deps.post(
+            "/api/v1/recognition/images",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"file_id": file_meta.id},
+        )
+    job_id = post_resp.json()["job_id"]
+
+    get_resp = client_with_deps.get(
+        f"/api/v1/recognition/history/{job_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert data["job_id"] == job_id
+    assert len(data["vehicles"]) == 1
+    assert data["vehicles"][0]["plate"]["text"] == "DL01AB1234"
+
+
+@pytest.mark.asyncio
+async def test_recognition_job_detail_success_video(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """GET /api/v1/recognition/history/{job_id} returns video recognition job detail with frame timestamps."""
+    vid_bytes = create_test_video_bytes()
+    user, file_meta = await seed_user_and_file(
+        db_session, test_storage, filename="video_hist.mp4", mime_type="video/mp4", img_bytes=vid_bytes
+    )
+    token = create_access_token(subject=user.id)
+
+    fake_pipeline = ALPRPipeline(
+        vehicle_detector=FakeVehicleDetector(),
+        plate_detector=FakePlateDetector(),
+        ocr_engine=FakeOCR(),
+        cleaner=FakeCleaner(),
+    )
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.services.recognition_service.ALPRPipeline", lambda: fake_pipeline)
+        post_resp = client_with_deps.post(
+            "/api/v1/recognition/videos",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"file_id": file_meta.id},
+        )
+    job_id = post_resp.json()["job_id"]
+
+    get_resp = client_with_deps.get(
+        f"/api/v1/recognition/history/{job_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert data["job_id"] == job_id
+    assert "frames" in data
+    assert len(data["frames"]) > 0
+    assert "timestamp_seconds" in data["frames"][0]
+
+
+@pytest.mark.asyncio
+async def test_recognition_job_detail_cross_user_rejected(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """User A cannot access User B's job detail via GET /history/{job_id}."""
+    user_a, _ = await seed_user_and_file(db_session, test_storage, email="user_a_detail@vehiclevision.ai")
+    user_b, file_b = await seed_user_and_file(db_session, test_storage, email="user_b_detail@vehiclevision.ai")
+
+    token_a = create_access_token(subject=user_a.id)
+    token_b = create_access_token(subject=user_b.id)
+
+    fake_pipeline = ALPRPipeline(
+        vehicle_detector=FakeVehicleDetector(),
+        plate_detector=FakePlateDetector(),
+        ocr_engine=FakeOCR(),
+        cleaner=FakeCleaner(),
+    )
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.services.recognition_service.ALPRPipeline", lambda: fake_pipeline)
+        post_b = client_with_deps.post(
+            "/api/v1/recognition/images",
+            headers={"Authorization": f"Bearer {token_b}"},
+            json={"file_id": file_b.id},
+        )
+    job_id_b = post_b.json()["job_id"]
+
+    # User A requests User B's job detail
+    resp_get = client_with_deps.get(
+        f"/api/v1/recognition/history/{job_id_b}",
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert resp_get.status_code in (401, 403, 404)
+
+
+@pytest.mark.asyncio
+async def test_recognition_job_detail_nonexistent_returns_404(
+    db_session: AsyncSession, test_storage: LocalStorageService, client_with_deps: TestClient
+):
+    """GET /api/v1/recognition/history/{job_id} for nonexistent job returns 404 Not Found."""
+    user, _ = await seed_user_and_file(db_session, test_storage)
+    token = create_access_token(subject=user.id)
+
+    response = client_with_deps.get(
+        "/api/v1/recognition/history/nonexistent_job_id_0000",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 404
+
+
+def test_openapi_history_routes_registered(client_with_deps: TestClient):
+    """OpenAPI schema registers GET /api/v1/recognition/history and GET /api/v1/recognition/history/{job_id}."""
+    response = client_with_deps.get("/openapi.json")
+    assert response.status_code == 200
+    schema = response.json()
+    assert "/api/v1/recognition/history" in schema["paths"]
+    assert "get" in schema["paths"]["/api/v1/recognition/history"]
+    assert "/api/v1/recognition/history/{job_id}" in schema["paths"]
+    assert "get" in schema["paths"]["/api/v1/recognition/history/{job_id}"]
