@@ -1,3 +1,4 @@
+import time
 from typing import Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,21 +69,27 @@ class OAuthService:
 
         # Exchange authorization code for user profile
         if provider_lower == "google":
-            # For google, extract expected nonce if nonce_cookie provided
-            expected_nonce = None
-            if nonce_cookie:
-                try:
-                    from jose import jwt
-                    from app.core.config import settings
+            if not nonce_cookie:
+                raise OAuthException("Google OIDC authentication requires a valid nonce cookie")
 
-                    payload = jwt.decode(
-                        nonce_cookie,
-                        settings.SECRET_KEY,
-                        algorithms=[settings.JWT_ALGORITHM],
-                    )
-                    expected_nonce = payload.get("nonce")
-                except Exception:
-                    raise OAuthException("Invalid OIDC nonce cookie")
+            try:
+                from jose import jwt
+                from app.core.config import settings
+
+                payload = jwt.decode(
+                    nonce_cookie,
+                    settings.SECRET_KEY,
+                    algorithms=[settings.JWT_ALGORITHM],
+                )
+            except Exception:
+                raise OAuthException("Invalid OIDC nonce cookie")
+
+            if payload.get("exp", 0) < int(time.time()):
+                raise OAuthException("OIDC nonce cookie has expired")
+
+            expected_nonce = payload.get("nonce")
+            if not expected_nonce:
+                raise OAuthException("OIDC nonce token missing nonce value")
 
             profile = await GoogleOAuthProvider.exchange_code(
                 code=code, expected_nonce=expected_nonce
@@ -90,16 +97,17 @@ class OAuthService:
         else:
             profile = await GitHubOAuthProvider.exchange_code(code=code)
 
-        # Upsert user & oauth account transactionally
+        # Upsert user & oauth account transactionally (provider access tokens are not stored in DB)
         user = await self.user_repo.get_or_create_oauth_user(
             provider=provider_lower,
             provider_user_id=profile["provider_user_id"],
             email=profile["email"],
             full_name=profile.get("full_name"),
             avatar_url=profile.get("avatar_url"),
-            access_token=profile.get("access_token"),
-            refresh_token=profile.get("refresh_token"),
+            access_token=None,
+            refresh_token=None,
         )
+
 
         if not user.is_active:
             raise OAuthException(

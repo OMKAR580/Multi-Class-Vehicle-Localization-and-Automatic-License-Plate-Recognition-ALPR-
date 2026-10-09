@@ -75,8 +75,8 @@ class UserRepository:
             )
             oauth_acc = result.scalars().first()
             if oauth_acc:
-                oauth_acc.access_token = access_token
-                oauth_acc.refresh_token = refresh_token
+                oauth_acc.access_token = None
+                oauth_acc.refresh_token = None
 
             try:
                 await self.session.commit()
@@ -110,9 +110,10 @@ class UserRepository:
                 user_id=new_user.id,
                 provider=provider,
                 provider_user_id=provider_user_id,
-                access_token=access_token,
-                refresh_token=refresh_token,
+                access_token=None,
+                refresh_token=None,
             )
+
             self.session.add(oauth_acc)
             await self.session.commit()
             await self.session.refresh(new_user)

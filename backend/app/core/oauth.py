@@ -257,7 +257,10 @@ class GoogleOAuthProvider:
         if iss not in ["https://accounts.google.com", "accounts.google.com"]:
             raise OAuthException(f"Invalid Google ID token issuer: {iss}")
 
-        if expected_nonce and claims.get("nonce") != expected_nonce:
+        if not expected_nonce:
+            raise OAuthException("Google OIDC authentication requires a valid expected nonce")
+
+        if claims.get("nonce") != expected_nonce:
             raise OAuthException("Google ID token nonce mismatch")
 
         email = claims.get("email")
@@ -347,10 +350,14 @@ class GitHubOAuthProvider:
             user_data = user_resp.json()
 
             emails_resp = await client.get(cls.EMAILS_URL, headers=auth_headers)
-            verified_primary_email = None
+            if emails_resp.status_code != 200:
+                raise ProviderAPIException(
+                    "GitHub", f"Emails API fetch failed ({emails_resp.status_code})"
+                )
 
-            if emails_resp.status_code == 200:
-                emails_list = emails_resp.json()
+            verified_primary_email = None
+            emails_list = emails_resp.json()
+            if isinstance(emails_list, list):
                 for e in emails_list:
                     if e.get("primary") and e.get("verified"):
                         verified_primary_email = e.get("email")
@@ -361,13 +368,11 @@ class GitHubOAuthProvider:
                             verified_primary_email = e.get("email")
                             break
 
-            if not verified_primary_email and user_data.get("email"):
-                verified_primary_email = user_data.get("email")
-
             if not verified_primary_email:
                 raise OAuthException(
                     "GitHub account must have a verified primary email address"
                 )
+
 
         return {
             "provider_user_id": str(user_data["id"]),

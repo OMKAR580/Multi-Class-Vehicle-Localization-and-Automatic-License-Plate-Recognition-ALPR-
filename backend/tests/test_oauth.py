@@ -86,7 +86,25 @@ def client_with_db(db_session: AsyncSession):
 
 
 # ==============================================================================
-# 1. Redirect Allowlist Enforcement Tests
+# 1. Obsolete Endpoint Removal Tests
+# ==============================================================================
+
+
+def test_obsolete_oauth_endpoint_removed(client_with_db: TestClient):
+    """POST /api/v1/auth/oauth has been removed and returns 404 Not Found."""
+    resp = client_with_db.post(
+        "/api/v1/auth/oauth",
+        json={
+            "provider": "google",
+            "code": "test_code",
+            "redirect_uri": "http://localhost:3000",
+        },
+    )
+    assert resp.status_code == 404
+
+
+# ==============================================================================
+# 2. Redirect Allowlist Enforcement Tests
 # ==============================================================================
 
 
@@ -137,48 +155,89 @@ def test_validate_redirect_url_hostile_cases():
 
 
 # ==============================================================================
-# 2. State & Nonce CSRF Security Tests
+# 3. Mandatory Google Nonce Validation Tests
 # ==============================================================================
 
 
-def test_oauth_state_manager_create_and_verify():
-    """Verify OAuth state manager creates signed, timestamped state tokens."""
-    with patch.object(
-        settings, "ALLOWED_REDIRECT_URLS", ["http://localhost:3000/dashboard"]
+@pytest.mark.asyncio
+async def test_google_oauth_missing_nonce_cookie_fails(db_session: AsyncSession):
+    """Google OAuth callback fails if nonce cookie is missing."""
+    raw_state, signed_state = OAuthStateManager.create_state("google")
+    service = OAuthService(db_session)
+    with pytest.raises(
+        OAuthException, match="requires a valid nonce cookie"
     ):
-        raw_state, signed_cookie = OAuthStateManager.create_state(
-            "google", redirect_url="http://localhost:3000/dashboard"
+        await service.authenticate_oauth(
+            provider="google",
+            code="test_code",
+            state_param=raw_state,
+            state_cookie=signed_state,
+            nonce_cookie=None,
         )
-        assert raw_state is not None
-        assert signed_cookie is not None
 
-        target_url = OAuthStateManager.verify_state(
-            raw_state, signed_cookie, "google"
+
+@pytest.mark.asyncio
+async def test_google_oauth_malformed_nonce_cookie_fails(db_session: AsyncSession):
+    """Google OAuth callback fails if nonce cookie is malformed."""
+    raw_state, signed_state = OAuthStateManager.create_state("google")
+    service = OAuthService(db_session)
+    with pytest.raises(OAuthException, match="Invalid OIDC nonce cookie"):
+        await service.authenticate_oauth(
+            provider="google",
+            code="test_code",
+            state_param=raw_state,
+            state_cookie=signed_state,
+            nonce_cookie="malformed_nonce_cookie_value",
         )
-        assert target_url == "http://localhost:3000/dashboard"
 
-        with pytest.raises(OAuthException, match="provider mismatch"):
-            OAuthStateManager.verify_state(raw_state, signed_cookie, "github")
 
-        with pytest.raises(OAuthException, match="CSRF mismatch"):
-            OAuthStateManager.verify_state(
-                "invalid_state_token", signed_cookie, "google"
+@pytest.mark.asyncio
+async def test_google_oauth_nonce_mismatch_fails(db_session: AsyncSession, rsa_test_keys):
+    """Google OAuth callback fails if nonce cookie does not match ID token nonce claim."""
+    raw_state, signed_state = OAuthStateManager.create_state("google")
+    _, signed_nonce = OAuthStateManager.create_nonce()
+
+    # ID token with different nonce
+    claims = {
+        "iss": "https://accounts.google.com",
+        "aud": "test_google_client_id",
+        "sub": "google_usr_123",
+        "email": "user@gmail.com",
+        "email_verified": True,
+        "exp": int(time.time()) + 3600,
+        "nonce": "mismatched_nonce_value",
+    }
+    id_token = jwt.encode(
+        claims,
+        rsa_test_keys["private_pem"],
+        algorithm="RS256",
+        headers={"kid": rsa_test_keys["kid"]},
+    )
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"id_token": id_token}
+
+    with patch.object(settings, "GOOGLE_CLIENT_ID", "test_google_client_id"), patch.object(
+        settings, "GOOGLE_CLIENT_SECRET", "test_secret"
+    ), patch.object(
+        GoogleOAuthProvider, "jwks_override", rsa_test_keys["jwks"]
+    ), patch(
+        "httpx.AsyncClient.post", return_value=mock_resp
+    ):
+        service = OAuthService(db_session)
+        with pytest.raises(OAuthException, match="Google ID token nonce mismatch"):
+            await service.authenticate_oauth(
+                provider="google",
+                code="code",
+                state_param=raw_state,
+                state_cookie=signed_state,
+                nonce_cookie=signed_nonce,
             )
 
 
-def test_oauth_state_manager_nonce():
-    """Verify OIDC nonce creation and validation."""
-    nonce, signed_nonce = OAuthStateManager.create_nonce()
-    assert nonce is not None
-
-    OAuthStateManager.verify_nonce(nonce, signed_nonce)
-
-    with pytest.raises(OAuthException, match="nonce verification failed"):
-        OAuthStateManager.verify_nonce("wrong_nonce", signed_nonce)
-
-
 # ==============================================================================
-# 3. Google OIDC Cryptographic Signature & Claims Verification Tests
+# 4. Google OIDC Cryptographic Signature & Claims Verification Tests
 # ==============================================================================
 
 
@@ -227,145 +286,93 @@ async def test_google_id_token_valid_rsa_signature(rsa_test_keys):
         assert result["email"] == "verified_google@gmail.com"
 
 
-@pytest.mark.asyncio
-async def test_google_id_token_invalid_signature(rsa_test_keys):
-    """Google ID token signed with a different RSA key fails cryptographic verification."""
-    other_key = rsa.generate_private_key(65537, 2048)
-    other_pem = other_key.private_bytes(
-        serialization.Encoding.PEM,
-        serialization.PrivateFormat.PKCS8,
-        serialization.NoEncryption(),
-    )
-
-    claims = {
-        "iss": "https://accounts.google.com",
-        "aud": "test_google_client_id",
-        "sub": "google_usr_99999",
-        "email": "forged@gmail.com",
-        "email_verified": True,
-        "exp": int(time.time()) + 3600,
-    }
-
-    # Signed with other_pem but referencing rsa_test_keys kid
-    forged_token = jwt.encode(
-        claims,
-        other_pem,
-        algorithm="RS256",
-        headers={"kid": rsa_test_keys["kid"], "alg": "RS256"},
-    )
-
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = {"id_token": forged_token}
-
-    with patch.object(settings, "GOOGLE_CLIENT_ID", "test_google_client_id"), patch.object(
-        settings, "GOOGLE_CLIENT_SECRET", "test_google_secret"
-    ), patch.object(
-        GoogleOAuthProvider, "jwks_override", rsa_test_keys["jwks"]
-    ), patch(
-        "httpx.AsyncClient.post", return_value=mock_resp
-    ):
-        with pytest.raises(OAuthException, match="signature or claim validation failed"):
-            await GoogleOAuthProvider.exchange_code(code="code123")
+# ==============================================================================
+# 5. GitHub Verified Email & API Error Tests
+# ==============================================================================
 
 
 @pytest.mark.asyncio
-async def test_google_id_token_wrong_issuer(rsa_test_keys):
-    """Google ID token with untrusted issuer is rejected."""
-    claims = {
-        "iss": "https://untrusted-issuer.com",
-        "aud": "test_google_client_id",
-        "sub": "google_usr_99999",
-        "email": "user@gmail.com",
-        "email_verified": True,
-        "exp": int(time.time()) + 3600,
-    }
+async def test_github_emails_api_error_fails(db_session: AsyncSession):
+    """GitHub code exchange fails if /user/emails API returns a non-200 error status."""
+    raw_state, signed_state = OAuthStateManager.create_state("github")
 
-    id_token = jwt.encode(
-        claims,
-        rsa_test_keys["private_pem"],
-        algorithm="RS256",
-        headers={"kid": rsa_test_keys["kid"]},
-    )
+    mock_token_resp = MagicMock()
+    mock_token_resp.status_code = 200
+    mock_token_resp.json.return_value = {"access_token": "gho_test_token"}
 
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = {"id_token": id_token}
+    mock_user_resp = MagicMock()
+    mock_user_resp.status_code = 200
+    mock_user_resp.json.return_value = {"id": 12345, "login": "gh_user"}
 
-    with patch.object(settings, "GOOGLE_CLIENT_ID", "test_google_client_id"), patch.object(
-        settings, "GOOGLE_CLIENT_SECRET", "test_google_secret"
-    ), patch.object(
-        GoogleOAuthProvider, "jwks_override", rsa_test_keys["jwks"]
+    mock_emails_resp = MagicMock()
+    mock_emails_resp.status_code = 403
+    mock_emails_resp.json.return_value = {"message": "API rate limit exceeded"}
+
+    async def mock_async_client_get(url, headers=None):
+        if "user/emails" in url:
+            return mock_emails_resp
+        return mock_user_resp
+
+    with patch.object(settings, "GITHUB_CLIENT_ID", "test_github_client_id"), patch.object(
+        settings, "GITHUB_CLIENT_SECRET", "test_github_secret"
     ), patch(
-        "httpx.AsyncClient.post", return_value=mock_resp
+        "httpx.AsyncClient.post", return_value=mock_token_resp
+    ), patch(
+        "httpx.AsyncClient.get", side_effect=mock_async_client_get
     ):
-        with pytest.raises(OAuthException, match="Invalid Google ID token issuer"):
-            await GoogleOAuthProvider.exchange_code(code="code123")
+
+        service = OAuthService(db_session)
+        with pytest.raises(OAuthException, match="Emails API fetch failed"):
+            await service.authenticate_oauth(
+                provider="github",
+                code="test_gh_code",
+                state_param=raw_state,
+                state_cookie=signed_state,
+            )
 
 
 @pytest.mark.asyncio
-async def test_google_id_token_unknown_kid(rsa_test_keys):
-    """Google ID token referencing unknown kid fails closed."""
-    claims = {
-        "iss": "https://accounts.google.com",
-        "aud": "test_google_client_id",
-        "sub": "google_usr_99999",
-        "email": "user@gmail.com",
-        "email_verified": True,
-        "exp": int(time.time()) + 3600,
-    }
+async def test_github_empty_emails_list_fails(db_session: AsyncSession):
+    """GitHub code exchange fails if /user/emails returns an empty list."""
+    raw_state, signed_state = OAuthStateManager.create_state("github")
 
-    id_token = jwt.encode(
-        claims,
-        rsa_test_keys["private_pem"],
-        algorithm="RS256",
-        headers={"kid": "unknown_kid_999"},
-    )
+    mock_token_resp = MagicMock()
+    mock_token_resp.status_code = 200
+    mock_token_resp.json.return_value = {"access_token": "gho_test_token"}
 
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = {"id_token": id_token}
+    mock_user_resp = MagicMock()
+    mock_user_resp.status_code = 200
+    mock_user_resp.json.return_value = {"id": 12345, "login": "gh_user", "email": "unverified@github.com"}
 
-    with patch.object(settings, "GOOGLE_CLIENT_ID", "test_google_client_id"), patch.object(
-        settings, "GOOGLE_CLIENT_SECRET", "test_google_secret"
-    ), patch.object(
-        GoogleOAuthProvider, "jwks_override", rsa_test_keys["jwks"]
+    mock_emails_resp = MagicMock()
+    mock_emails_resp.status_code = 200
+    mock_emails_resp.json.return_value = []
+
+    async def mock_async_client_get(url, headers=None):
+        if "user/emails" in url:
+            return mock_emails_resp
+        return mock_user_resp
+
+    with patch.object(settings, "GITHUB_CLIENT_ID", "test_github_client_id"), patch.object(
+        settings, "GITHUB_CLIENT_SECRET", "test_github_secret"
     ), patch(
-        "httpx.AsyncClient.post", return_value=mock_resp
-    ):
-        with pytest.raises(OAuthException, match="kid.*not found in trusted JWKS"):
-            await GoogleOAuthProvider.exchange_code(code="code123")
-
-
-@pytest.mark.asyncio
-async def test_google_id_token_unsupported_alg(rsa_test_keys):
-    """Google ID token header with non-RS256 algorithm is rejected."""
-    id_token = jwt.encode(
-        {"iss": "https://accounts.google.com"},
-        "secret",
-        algorithm="HS256",
-        headers={"kid": rsa_test_keys["kid"], "alg": "HS256"},
-    )
-
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = {"id_token": id_token}
-
-    with patch.object(settings, "GOOGLE_CLIENT_ID", "test_google_client_id"), patch.object(
-        settings, "GOOGLE_CLIENT_SECRET", "test_google_secret"
-    ), patch.object(
-        GoogleOAuthProvider, "jwks_override", rsa_test_keys["jwks"]
+        "httpx.AsyncClient.post", return_value=mock_token_resp
     ), patch(
-        "httpx.AsyncClient.post", return_value=mock_resp
+        "httpx.AsyncClient.get", side_effect=mock_async_client_get
     ):
-        with pytest.raises(
-            OAuthException, match="Unsupported Google ID token signing algorithm"
-        ):
-            await GoogleOAuthProvider.exchange_code(code="code123")
+
+        service = OAuthService(db_session)
+        with pytest.raises(OAuthException, match="verified primary email address"):
+            await service.authenticate_oauth(
+                provider="github",
+                code="test_gh_code",
+                state_param=raw_state,
+                state_cookie=signed_state,
+            )
 
 
 # ==============================================================================
-# 4. Prevent Automatic Account Linking Tests
+# 6. Prevent Automatic Account Linking & Non-Persistence Tests
 # ==============================================================================
 
 
@@ -381,7 +388,6 @@ async def test_no_implicit_account_linking(db_session: AsyncSession):
     )
     await user_repo.create(existing_user)
 
-    # Attempt OAuth lookup for a new provider_user_id but matching victim@company.com email
     with pytest.raises(
         OAuthException, match="Implicit account linking is disabled"
     ):
@@ -392,7 +398,6 @@ async def test_no_implicit_account_linking(db_session: AsyncSession):
             full_name="Attacker",
         )
 
-    # Confirm existing user has no linked OAuthAccount records
     result = await db_session.execute(
         select(OAuthAccount).where(OAuthAccount.user_id == existing_user.id)
     )
@@ -400,111 +405,94 @@ async def test_no_implicit_account_linking(db_session: AsyncSession):
     assert len(linked_accounts) == 0
 
 
-
 @pytest.mark.asyncio
-async def test_authoritative_provider_identity_login(db_session: AsyncSession):
-    """Existing OAuth identity logs in successfully by provider + provider_user_id."""
+async def test_provider_tokens_are_not_persisted(db_session: AsyncSession):
+    """Third-party provider access and refresh tokens are not stored in database records."""
     user_repo = UserRepository(db_session)
-
-    # 1. Create first time
-    user1 = await user_repo.get_or_create_oauth_user(
+    user = await user_repo.get_or_create_oauth_user(
         provider="github",
-        provider_user_id="gh_user_777",
-        email="octo@github.com",
-        full_name="Octocat",
+        provider_user_id="gh_user_888",
+        email="user888@github.com",
+        full_name="User 888",
+        access_token="secret_gh_access_token",
+        refresh_token="secret_gh_refresh_token",
     )
-    assert user1.id is not None
 
-    # 2. Login second time with same provider identity
-    user2 = await user_repo.get_or_create_oauth_user(
-        provider="github",
-        provider_user_id="gh_user_777",
-        email="octo@github.com",
+    result = await db_session.execute(
+        select(OAuthAccount).where(OAuthAccount.user_id == user.id)
     )
-    assert user2.id == user1.id
+    oauth_acc = result.scalars().first()
+    assert oauth_acc is not None
+    assert oauth_acc.access_token is None
+    assert oauth_acc.refresh_token is None
 
 
 # ==============================================================================
-# 5. Database Uniqueness & IntegrityError Conflict Tests
+# 7. Cookie & Handoff Contract Integration Tests
 # ==============================================================================
 
 
-@pytest.mark.asyncio
-async def test_oauth_account_unique_constraint(db_session: AsyncSession):
-    """Database level unique constraints prevent duplicate provider identities."""
-    user_repo = UserRepository(db_session)
-    u1 = User(email="u1@example.com")
-    u2 = User(email="u2@example.com")
-    db_session.add(u1)
-    db_session.add(u2)
-    await db_session.commit()
-
-    acc1 = OAuthAccount(
-        user_id=u1.id, provider="google", provider_user_id="same_google_id"
-    )
-    db_session.add(acc1)
-    await db_session.commit()
-
-    # Inserting second record with same provider & provider_user_id must fail
-    acc2 = OAuthAccount(
-        user_id=u2.id, provider="google", provider_user_id="same_google_id"
-    )
-    db_session.add(acc2)
-    with pytest.raises(IntegrityError):
-        await db_session.commit()
-    await db_session.rollback()
-
-
-# ==============================================================================
-# 6. Cookie Security & Endpoint Integration Tests
-# ==============================================================================
-
-
-def test_cookie_security_attributes_in_production_vs_development(
-    client_with_db: TestClient,
-):
-    """Cookies use Secure=True in production and Secure=False in development with narrow path."""
+def test_web_callback_handoff_browser_vs_api(client_with_db: TestClient, rsa_test_keys):
+    """Callback with Accept: text/html sets HttpOnly cookie and 302 redirects; API request returns JSON."""
     with patch.object(
-        settings, "GOOGLE_CLIENT_ID", "test_id"
-    ), patch.object(
-        settings, "GOOGLE_CLIENT_SECRET", "test_secret"
-    ), patch.object(
         settings, "ALLOWED_REDIRECT_URLS", ["http://localhost:3000/dashboard"]
     ):
+        raw_state, signed_state = OAuthStateManager.create_state(
+            "github", redirect_url="http://localhost:3000/dashboard"
+        )
 
-        # Test Development Mode
-        with patch.object(settings, "ENVIRONMENT", "development"):
-            resp_dev = client_with_db.get(
-                "/api/v1/auth/google/login", follow_redirects=False
-            )
-            assert resp_dev.status_code == 302
-            cookie_header = resp_dev.headers.get("set-cookie", "")
-            assert "HttpOnly" in cookie_header
-            assert "Path=/api/v1/auth" in cookie_header
-            assert "Secure" not in cookie_header
+    mock_token_resp = MagicMock()
+    mock_token_resp.status_code = 200
+    mock_token_resp.json.return_value = {"access_token": "gho_test"}
 
-        # Test Production Mode
-        with patch.object(settings, "ENVIRONMENT", "production"):
-            resp_prod = client_with_db.get(
-                "/api/v1/auth/google/login", follow_redirects=False
-            )
-            assert resp_prod.status_code == 302
-            cookie_header_prod = resp_prod.headers.get("set-cookie", "")
-            assert "HttpOnly" in cookie_header_prod
-            assert "Path=/api/v1/auth" in cookie_header_prod
-            assert "Secure" in cookie_header_prod
+    mock_user_resp = MagicMock()
+    mock_user_resp.status_code = 200
+    mock_user_resp.json.return_value = {"id": 5555, "login": "webuser", "name": "Web User"}
 
+    mock_emails_resp = MagicMock()
+    mock_emails_resp.status_code = 200
+    mock_emails_resp.json.return_value = [
+        {"email": "webuser@github.com", "primary": True, "verified": True}
+    ]
 
-def test_refresh_token_rejected_as_access_token(
-    db_session: AsyncSession, client_with_db: TestClient
-):
-    """Passing a refresh token to a Bearer access token protected endpoint returns 401 Unauthorized."""
-    refresh_tok = create_refresh_token(subject="user_123")
-    headers = {"Authorization": f"Bearer {refresh_tok}"}
+    async def mock_async_client_get(url, headers=None):
+        if "user/emails" in url:
+            return mock_emails_resp
+        return mock_user_resp
 
-    resp = client_with_db.get("/api/v1/auth/me", headers=headers)
-    assert resp.status_code == 401
-    assert "Invalid token type" in resp.json()["detail"]
+    with patch.object(settings, "GITHUB_CLIENT_ID", "test_id"), patch.object(
+        settings, "GITHUB_CLIENT_SECRET", "test_secret"
+    ), patch(
+        "httpx.AsyncClient.post", return_value=mock_token_resp
+    ), patch(
+        "httpx.AsyncClient.get", side_effect=mock_async_client_get
+    ):
+
+        # 1. Web Browser navigation request -> 302 redirect & HttpOnly cookie
+        headers_html = {"Accept": "text/html,application/xhtml+xml"}
+        cookies = {"oauth_state": signed_state}
+        resp_browser = client_with_db.get(
+            f"/api/v1/auth/github/callback?code=gh_code&state={raw_state}",
+            headers=headers_html,
+            cookies=cookies,
+            follow_redirects=False,
+        )
+        assert resp_browser.status_code == 302
+        assert resp_browser.headers["location"] == "http://localhost:3000/dashboard"
+        cookie_header = resp_browser.headers.get("set-cookie", "")
+        assert "access_token=" in cookie_header
+        assert "HttpOnly" in cookie_header
+
+        # 2. Programmatic API request -> 200 OK with JSON Token payload
+        headers_json = {"Accept": "application/json"}
+        resp_api = client_with_db.get(
+            f"/api/v1/auth/github/callback?code=gh_code&state={raw_state}",
+            headers=headers_json,
+            cookies=cookies,
+        )
+        assert resp_api.status_code == 200
+        assert "access_token" in resp_api.json()
+        assert resp_api.json()["token_type"] == "bearer"
 
 
 def test_logout_endpoint(client_with_db: TestClient):

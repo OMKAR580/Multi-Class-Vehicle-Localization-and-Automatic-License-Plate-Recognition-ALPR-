@@ -10,8 +10,6 @@ from app.core.exceptions import OAuthException
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
-    OAuthLoginRequest,
-    OAuthRedirectResponse,
     Token,
 )
 from app.schemas.user import UserResponse
@@ -71,6 +69,7 @@ async def oauth_login_redirect(
 @router.get("/auth/{provider}/callback", response_model=Token, tags=["Authentication"])
 async def oauth_callback(
     provider: str,
+    request: Request,
     response: Response,
     code: Optional[str] = Query(None),
     state: Optional[str] = Query(None),
@@ -83,6 +82,8 @@ async def oauth_callback(
     """
     Handles OAuth callback from Google or GitHub provider.
     Exchanges code for tokens, upserts user, and returns access/refresh JWT tokens.
+    - For API / SPA clients: Returns Token schema payload.
+    - For Web Browser clients with redirect_url: Sets HttpOnly session cookie and 302 redirects safely.
     """
     if error:
         raise OAuthException(
@@ -104,27 +105,27 @@ async def oauth_callback(
         nonce_cookie=oauth_nonce,
     )
 
+    is_production = settings.ENVIRONMENT == "production"
+    accept_header = request.headers.get("accept", "")
+
+    if redirect_url and "text/html" in accept_header:
+        redirect_resp = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+        redirect_resp.delete_cookie("oauth_state", path="/api/v1/auth")
+        redirect_resp.delete_cookie("oauth_nonce", path="/api/v1/auth")
+        redirect_resp.set_cookie(
+            key="access_token",
+            value=token.access_token,
+            httponly=True,
+            secure=is_production,
+            samesite="lax",
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            path="/",
+        )
+        return redirect_resp
+
     response.delete_cookie("oauth_state", path="/api/v1/auth")
     response.delete_cookie("oauth_nonce", path="/api/v1/auth")
-
     return token
-
-
-@router.post("/auth/oauth", response_model=Token, tags=["Authentication"])
-async def oauth_login_legacy(
-    request: OAuthLoginRequest, db: AsyncSession = Depends(get_db)
-):
-    """
-    Legacy/Direct OAuth token exchange API endpoint boundary.
-    """
-    if request.provider not in ["google", "github"]:
-        raise OAuthException(f"Unsupported OAuth provider '{request.provider}'")
-
-    return Token(
-        access_token=f"oauth_placeholder_token_for_{request.provider}",
-        token_type="bearer",
-        refresh_token=f"oauth_placeholder_refresh_token_for_{request.provider}",
-    )
 
 
 @router.get("/auth/me", response_model=UserResponse, tags=["Authentication"])
