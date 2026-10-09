@@ -1,9 +1,10 @@
-"""Recognition service orchestrating ALPR image and video inference and database persistence."""
+"""Recognition service orchestrating ALPR image and video inference, history queries, and database persistence."""
 
 import io
+import math
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional, Union
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +24,8 @@ from app.repositories.file_repository import FileRepository
 from app.schemas.detection import LicensePlateResult, VehicleResult
 from app.schemas.recognition import (
     ImageRecognitionRequest,
+    RecognitionHistoryItem,
+    RecognitionHistoryResponse,
     RecognitionResponse,
     VideoFrameResult,
     VideoRecognitionRequest,
@@ -32,7 +35,7 @@ from app.services.storage_service import BaseStorageService
 
 
 class RecognitionService:
-    """Orchestrates image and video ALPR recognition inference, validation, and persistent storage."""
+    """Orchestrates image and video ALPR recognition inference, history queries, validation, and persistent storage."""
 
     def __init__(
         self,
@@ -96,6 +99,32 @@ class RecognitionService:
         )
         processing_time_ms = round((time.perf_counter() - t0) * 1000, 2)
 
+        # Construct raw result dict
+        vehicle_results: list[VehicleResult] = []
+        for v_box in ai_contract.vehicles:
+            plate_res: Optional[LicensePlateResult] = None
+            if v_box.plate:
+                plate_res = LicensePlateResult(
+                    text=v_box.plate.text,
+                    confidence=v_box.plate.confidence,
+                    bbox=v_box.plate.bbox,
+                )
+            vehicle_results.append(
+                VehicleResult(
+                    type=v_box.type,
+                    confidence=v_box.confidence,
+                    bbox=v_box.bbox,
+                    plate=plate_res,
+                )
+            )
+
+        raw_result_snapshot = {
+            "image_id": request.file_id,
+            "image_width": image_width,
+            "image_height": image_height,
+            "vehicles": [v.model_dump() for v in vehicle_results],
+        }
+
         # 6. Database persistence (DetectionJob, Vehicle, Plate)
         job = DetectionJob(
             user_id=current_user.id,
@@ -103,46 +132,28 @@ class RecognitionService:
             media_type="image",
             media_url=file_meta.file_path,
             processing_time_ms=processing_time_ms,
-            raw_result=ai_contract.model_dump(),
+            raw_result=raw_result_snapshot,
         )
         await self.detection_repo.create(job)
 
-        vehicle_results: list[VehicleResult] = []
-
-        for v_box in ai_contract.vehicles:
+        for v_res in vehicle_results:
             vehicle_entity = Vehicle(
                 detection_job_id=job.id,
-                vehicle_type=v_box.type,
-                confidence=v_box.confidence,
-                bbox=v_box.bbox,
+                vehicle_type=v_res.type,
+                confidence=v_res.confidence,
+                bbox=v_res.bbox,
             )
             self.db.add(vehicle_entity)
             await self.db.flush()
 
-            plate_result: Optional[LicensePlateResult] = None
-
-            if v_box.plate:
+            if v_res.plate:
                 plate_entity = Plate(
                     vehicle_id=vehicle_entity.id,
-                    plate_text=v_box.plate.text,
-                    confidence=v_box.plate.confidence,
-                    bbox=v_box.plate.bbox,
+                    plate_text=v_res.plate.text,
+                    confidence=v_res.plate.confidence,
+                    bbox=v_res.plate.bbox,
                 )
                 self.db.add(plate_entity)
-                plate_result = LicensePlateResult(
-                    text=v_box.plate.text,
-                    confidence=v_box.plate.confidence,
-                    bbox=v_box.plate.bbox,
-                )
-
-            vehicle_results.append(
-                VehicleResult(
-                    type=v_box.type,
-                    confidence=v_box.confidence,
-                    bbox=v_box.bbox,
-                    plate=plate_result,
-                )
-            )
 
         await self.db.commit()
 
@@ -208,8 +219,6 @@ class RecognitionService:
 
         # 6. Execute ALPR pipeline frame by frame
         frame_results: list[VideoFrameResult] = []
-        all_vehicle_entities: list[Vehicle] = []
-        all_plate_entities: list[Plate] = []
 
         for frame_idx, timestamp_sec, frame_jpeg_bytes, f_width, f_height in sampled_frames:
             ai_contract = self.pipeline.process_image(
@@ -342,3 +351,134 @@ class RecognitionService:
             raise ResourceNotFoundException("Video detection job", job_id)
 
         return VideoRecognitionResponse.model_validate(job.raw_result)
+
+    async def get_recognition_history(
+        self,
+        current_user: User,
+        page: int = 1,
+        page_size: int = 10,
+        media_type: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> RecognitionHistoryResponse:
+        """
+        Retrieves paginated recognition job history for the authenticated user.
+
+        Args:
+            current_user: Currently authenticated user.
+            page: 1-indexed page number.
+            page_size: Number of items per page.
+            media_type: Optional media type filter ('image', 'video').
+            status: Optional execution status filter ('COMPLETED', 'FAILED', 'PENDING').
+
+        Returns:
+            RecognitionHistoryResponse: Paginated container with summary items.
+        """
+        if media_type and media_type not in ("image", "video"):
+            raise InvalidFileException("Invalid media_type filter. Allowed values: 'image', 'video'.")
+
+        if status and status not in ("COMPLETED", "FAILED", "PENDING", "PROCESSING"):
+            raise InvalidFileException("Invalid status filter. Allowed values: 'COMPLETED', 'FAILED', 'PENDING', 'PROCESSING'.")
+
+        jobs, total = await self.detection_repo.list_by_user_paginated(
+            user_id=current_user.id,
+            page=page,
+            page_size=page_size,
+            media_type=media_type,
+            status=status,
+        )
+
+        items: list[RecognitionHistoryItem] = []
+        for job in jobs:
+            v_count = 0
+            p_count = 0
+
+            if job.raw_result and isinstance(job.raw_result, dict):
+                raw = job.raw_result
+                if job.media_type == "image":
+                    vehicles_data = raw.get("vehicles", [])
+                    v_count = len(vehicles_data)
+                    p_count = sum(1 for v in vehicles_data if isinstance(v, dict) and v.get("plate"))
+                elif job.media_type == "video":
+                    frames_data = raw.get("frames", [])
+                    for f in frames_data:
+                        if isinstance(f, dict):
+                            f_vehicles = f.get("vehicles", [])
+                            v_count += len(f_vehicles)
+                            p_count += sum(1 for v in f_vehicles if isinstance(v, dict) and v.get("plate"))
+            else:
+                v_count = len(job.vehicles)
+                p_count = sum(1 for v in job.vehicles if v.plate is not None)
+
+            items.append(
+                RecognitionHistoryItem(
+                    job_id=job.id,
+                    media_type=job.media_type,
+                    media_url=job.media_url,
+                    status=job.status,
+                    processing_time_ms=job.processing_time_ms,
+                    error_message=job.error_message,
+                    vehicle_count=v_count,
+                    plate_count=p_count,
+                    created_at=job.created_at,
+                )
+            )
+
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+        return RecognitionHistoryResponse(
+            items=items,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+
+    async def get_recognition_job_detail(
+        self,
+        job_id: str,
+        current_user: User,
+    ) -> Union[RecognitionResponse, VideoRecognitionResponse]:
+        """
+        Retrieves detailed recognition results for a specific job (image or video) owned by current_user.
+
+        Args:
+            job_id: Detection job identifier.
+            current_user: Currently authenticated User.
+
+        Returns:
+            RecognitionResponse or VideoRecognitionResponse based on job media_type.
+        """
+        job = await self.detection_repo.get_by_id(job_id)
+        if not job:
+            raise ResourceNotFoundException("Recognition job", job_id)
+
+        # Enforce job ownership boundary
+        if job.user_id != current_user.id:
+            raise UnauthorizedException("Access denied: You do not own this recognition job.")
+
+        if job.media_type == "video":
+            return VideoRecognitionResponse.model_validate(job.raw_result)
+        elif job.media_type == "image":
+            if job.raw_result and isinstance(job.raw_result, dict):
+                return RecognitionResponse(
+                    job_id=job.id,
+                    file_id=job.raw_result.get("image_id", job.media_url),
+                    status=job.status,
+                    processing_time_ms=job.processing_time_ms or 0.0,
+                    image_width=job.raw_result.get("image_width", 0),
+                    image_height=job.raw_result.get("image_height", 0),
+                    vehicles=job.raw_result.get("vehicles", []),
+                    created_at=job.created_at,
+                )
+            return RecognitionResponse(
+                job_id=job.id,
+                file_id=job.media_url,
+                status=job.status,
+                processing_time_ms=job.processing_time_ms or 0.0,
+                image_width=0,
+                image_height=0,
+                vehicles=[],
+                created_at=job.created_at,
+            )
+        else:
+            raise ResourceNotFoundException("Recognition job", job_id)

@@ -6,6 +6,8 @@ from app.schemas.report import ReportRequest, ReportResponse
 from app.schemas.file import FileUploadResponse
 from app.schemas.recognition import (
     ImageRecognitionRequest,
+    RecognitionHistoryItem,
+    RecognitionHistoryResponse,
     RecognitionResponse,
     VideoFrameResult,
     VideoRecognitionRequest,
@@ -32,4 +34,6 @@ __all__ = [
     "VideoRecognitionRequest",
     "VideoFrameResult",
     "VideoRecognitionResponse",
+    "RecognitionHistoryItem",
+    "RecognitionHistoryResponse",
 ]

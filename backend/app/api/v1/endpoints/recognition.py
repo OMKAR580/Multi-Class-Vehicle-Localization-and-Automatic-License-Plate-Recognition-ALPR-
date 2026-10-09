@@ -1,6 +1,7 @@
 """API endpoints for Vehicle Detection and License Plate Recognition (ALPR)."""
 
-from fastapi import APIRouter, Depends, status
+from typing import Optional, Union
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -8,6 +9,7 @@ from app.core.deps import get_current_user
 from app.models.user import User
 from app.schemas.recognition import (
     ImageRecognitionRequest,
+    RecognitionHistoryResponse,
     RecognitionResponse,
     VideoRecognitionRequest,
     VideoRecognitionResponse,
@@ -121,20 +123,85 @@ async def recognize_video(
 
 
 @router.get(
+    "/history",
+    response_model=RecognitionHistoryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="List Recognition History for Authenticated User",
+    description="""
+Fetch paginated recognition job history belonging to the currently authenticated user.
+
+### Requirements & Behavior:
+- **Authentication**: Requires a valid JWT Bearer token in the `Authorization` header (`Authorization: Bearer <token>`).
+- **Pagination**: Supports 1-indexed `page` and `page_size` parameters (max 100 per page).
+- **Filtering**:
+  - `media_type`: Optional filter by media category (`image` or `video`).
+  - `status`: Optional filter by execution status (`COMPLETED`, `FAILED`, `PENDING`).
+- **Ordering**: Stable ordering with newest jobs first (`created_at.desc()`, `id.desc()`).
+- **Ownership Boundary**: Exclusively returns jobs owned by the authenticated JWT subject.
+    """,
+    responses={
+        200: {"description": "Recognition history retrieved successfully."},
+        400: {"description": "Invalid media_type or status filter value."},
+        401: {"description": "Authentication credentials missing or invalid."},
+        422: {"description": "Unprocessable entity (invalid page or page_size query parameters)."},
+    },
+)
+async def list_recognition_history(
+    page: int = Query(default=1, ge=1, description="Page number (1-indexed)."),
+    page_size: int = Query(default=10, ge=1, le=100, description="Items per page."),
+    media_type: Optional[str] = Query(default=None, description="Filter by media category ('image' or 'video')."),
+    job_status: Optional[str] = Query(default=None, alias="status", description="Filter by status ('COMPLETED', 'FAILED', 'PENDING')."),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: BaseStorageService = Depends(get_storage_service),
+) -> RecognitionHistoryResponse:
+    """Handle authenticated recognition history query."""
+    service = RecognitionService(db=db, storage=storage)
+    return await service.get_recognition_history(
+        current_user=current_user,
+        page=page,
+        page_size=page_size,
+        media_type=media_type,
+        status=job_status,
+    )
+
+
+@router.get(
+    "/history/{job_id}",
+    response_model=Union[RecognitionResponse, VideoRecognitionResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve Detailed Results for a Specific Recognition Job",
+    description="""
+Fetch full ALPR recognition results and metadata for an existing detection job (image or video) owned by the current user.
+
+### Requirements & Behavior:
+- **Authentication**: Requires a valid JWT Bearer token in the `Authorization` header.
+- **Ownership Boundary**: Verifies that the target job belongs to the currently authenticated user. Attempting to retrieve another user's job returns 401/404.
+    """,
+    responses={
+        200: {"description": "Recognition job details retrieved successfully."},
+        401: {"description": "Authentication missing or unauthorized access."},
+        404: {"description": "Specified recognition job_id not found."},
+    },
+)
+async def get_recognition_job_detail(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: BaseStorageService = Depends(get_storage_service),
+) -> Union[RecognitionResponse, VideoRecognitionResponse]:
+    """Retrieve details for a specific image or video recognition job."""
+    service = RecognitionService(db=db, storage=storage)
+    return await service.get_recognition_job_detail(job_id=job_id, current_user=current_user)
+
+
+@router.get(
     "/videos/{job_id}",
     response_model=VideoRecognitionResponse,
     status_code=status.HTTP_200_OK,
     summary="Retrieve Status & Results for a Video Recognition Job",
     description="""
 Fetch processing status and frame-level ALPR results for an existing video recognition job.
-
-### Requirements & Behavior:
-- **Authentication**: Requires a valid JWT Bearer token in the `Authorization` header.
-- **Ownership Boundary**: Verifies that the target job belongs to the currently authenticated user. Accessing another user's job returns 401/404.
-
-### Error Statuses:
-- **401 Unauthorized**: Missing or invalid authentication credentials or accessing another user's job.
-- **404 Not Found**: Specified `job_id` does not exist or is not a video detection job.
     """,
     responses={
         200: {"description": "Video recognition job retrieved successfully."},
