@@ -64,6 +64,20 @@ class Settings(BaseSettings):
         ]
     )
 
+    # Storage and File Upload Configuration
+    MAX_UPLOAD_SIZE_BYTES: int = 15 * 1024 * 1024  # 15 MB
+    STORAGE_BACKEND: str = "local"
+    STORAGE_LOCAL_ROOT: str = str(BACKEND_DIR / "storage")
+    ALLOWED_IMAGE_EXTENSIONS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [".jpg", ".jpeg", ".png"]
+    )
+    ALLOWED_VIDEO_EXTENSIONS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [".mp4"]
+    )
+    ALLOWED_MIME_TYPES: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["image/jpeg", "image/png", "video/mp4"]
+    )
+
     model_config = SettingsConfigDict(
         env_file=(".env", str(BACKEND_DIR / ".env"), str(REPOSITORY_ROOT / ".env")),
         env_file_encoding="utf-8",
