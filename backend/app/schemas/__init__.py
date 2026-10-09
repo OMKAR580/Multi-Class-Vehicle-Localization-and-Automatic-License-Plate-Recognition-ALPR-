@@ -4,7 +4,13 @@ from app.schemas.auth import Token, LoginRequest
 from app.schemas.detection import AIDetectionResponse, VehicleResult, LicensePlateResult, DetectionJobCreate, DetectionJobStatus
 from app.schemas.report import ReportRequest, ReportResponse
 from app.schemas.file import FileUploadResponse
-from app.schemas.recognition import ImageRecognitionRequest, RecognitionResponse
+from app.schemas.recognition import (
+    ImageRecognitionRequest,
+    RecognitionResponse,
+    VideoFrameResult,
+    VideoRecognitionRequest,
+    VideoRecognitionResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -23,4 +29,7 @@ __all__ = [
     "FileUploadResponse",
     "ImageRecognitionRequest",
     "RecognitionResponse",
+    "VideoRecognitionRequest",
+    "VideoFrameResult",
+    "VideoRecognitionResponse",
 ]
