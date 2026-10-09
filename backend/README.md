@@ -152,12 +152,47 @@ Database session management is provided via `app.core.database.get_db`:
 
 ---
 
+## Secure File Upload API (Issue #5)
+
+The backend provides a secure, authenticated file upload system for vehicle images and videos used in downstream AI/ALPR detection workflows.
+
+### Endpoint: `POST /api/v1/files/upload`
+- **Authentication**: Requires a valid JWT Bearer token in the `Authorization` header (`Authorization: Bearer <token>`).
+- **Owner ID**: The asset owner is strictly and exclusively assigned to the authenticated user.
+- **Accepted Formats**:
+  - **Images**: JPEG (`.jpg`, `.jpeg`), PNG (`.png`)
+  - **Videos**: MP4 (`.mp4`)
+- **Multi-Layer Validation**:
+  - Extension allowlist enforcement.
+  - Declared `Content-Type` verification and alignment with extension.
+  - File header magic byte inspection.
+  - Deep image structural verification via Pillow (detects corrupt/truncated files and decompression bombs).
+  - Deep video container verification (ISOBMFF box/atom parsing).
+- **Storage Security**:
+  - Stored through a private storage abstraction layer (`BaseStorageService` / `LocalStorageService`).
+  - Server generates unpredictable, collision-resistant storage keys (`YYYY/MM/DD/{uuid}.ext`).
+  - Path traversal and overwrite protection.
+  - Incremental size limit enforcement during chunk streaming (default: 15 MB).
+  - Automatic cleanup of storage assets if database persistence fails (no orphaned files).
+
+### File Storage Environment Configuration
+- `MAX_UPLOAD_SIZE_BYTES`: Maximum upload size in bytes (default: `15728640` / 15 MB).
+- `STORAGE_BACKEND`: Storage provider backend (default: `"local"`).
+- `STORAGE_LOCAL_ROOT`: Private directory for storing assets (default: `"storage"`).
+
+---
+
 ## Tests
 
 From the `backend` directory, run:
 
 ```powershell
 python -m pytest tests/ -v
+```
+
+To run file upload tests only:
+```powershell
+python -m pytest tests/test_files.py -v
 ```
 
 To run database-specific tests only:
@@ -176,3 +211,10 @@ Test coverage includes:
 - ORM persistence, retrieval, relationships, and cascading deletes
 - Database connection failure handling without credential leakage
 - Alembic initial migration schema metadata integrity
+- Secure file upload endpoint (`POST /api/v1/files/upload`)
+- Authenticated image and video multipart uploads
+- Extension, MIME, and magic-byte validation & mismatch rejection
+- Incremental file-size enforcement and 0-byte upload rejection
+- Path-traversal sanitization and client owner-id spoofing protection
+- Database rollback and storage cleanup upon persistence failure
+- OpenAPI route and response documentation
