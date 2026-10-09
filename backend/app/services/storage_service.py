@@ -29,6 +29,16 @@ class BaseStorageService(ABC):
         """Check whether an asset exists under storage_key."""
         pass
 
+    @abstractmethod
+    async def get_path(self, storage_key: str) -> Path:
+        """Get filesystem path for an asset under storage_key."""
+        pass
+
+    @abstractmethod
+    async def read_bytes(self, storage_key: str) -> bytes:
+        """Read asset contents as bytes."""
+        pass
+
     @staticmethod
     def generate_storage_key(extension: str) -> str:
         """
@@ -114,6 +124,22 @@ class LocalStorageService(BaseStorageService):
             return target_path.is_file()
         except Exception:
             return False
+
+    async def get_path(self, storage_key: str) -> Path:
+        """Get absolute filesystem Path for storage_key, enforcing path traversal checks."""
+        target_path = self._resolve_path(storage_key)
+        if not target_path.is_file():
+            raise StorageException("Stored asset not found on disk.")
+        return target_path
+
+    async def read_bytes(self, storage_key: str) -> bytes:
+        """Read asset bytes from disk."""
+        target_path = await self.get_path(storage_key)
+        try:
+            return target_path.read_bytes()
+        except OSError as exc:
+            logger.error("Failed to read stored asset '%s': %s", storage_key, exc)
+            raise StorageException("Failed to read asset contents from storage.") from exc
 
 
 def get_storage_service() -> BaseStorageService:

@@ -78,6 +78,15 @@ class Settings(BaseSettings):
         default_factory=lambda: ["image/jpeg", "image/png", "video/mp4"]
     )
 
+    # AI Pipeline & ALPR Configuration
+    VEHICLE_MODEL_PATH: str = str(REPOSITORY_ROOT / "ai" / "models" / "yolov8_vehicle.pt")
+    PLATE_MODEL_PATH: str = str(REPOSITORY_ROOT / "ai" / "models" / "yolov8_plate.pt")
+    MIN_VEHICLE_CONFIDENCE: float = 0.40
+    MIN_PLATE_CONFIDENCE: float = 0.40
+    MIN_OCR_CONFIDENCE: float = 0.30
+    MAX_INFERENCE_IMAGE_DIMENSION: int = 4096
+    INFERENCE_TIMEOUT_SECONDS: int = 15
+
     model_config = SettingsConfigDict(
         env_file=(".env", str(BACKEND_DIR / ".env"), str(REPOSITORY_ROOT / ".env")),
         env_file_encoding="utf-8",
