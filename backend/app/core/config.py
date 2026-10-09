@@ -53,6 +53,17 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
 
+    # OAuth callback URLs — must match provider console registration exactly.
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/github/callback"
+    OAUTH_STATE_SECRET: str = ""
+    ALLOWED_REDIRECT_URLS: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000/dashboard",
+            "http://localhost:3000/auth/callback",
+        ]
+    )
+
     model_config = SettingsConfigDict(
         env_file=(".env", str(BACKEND_DIR / ".env"), str(REPOSITORY_ROOT / ".env")),
         env_file_encoding="utf-8",

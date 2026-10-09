@@ -43,11 +43,52 @@ class ResourceNotFoundException(ALPRPlatformException):
 
 
 class InvalidCredentialsException(ALPRPlatformException):
-    def __init__(self):
+    def __init__(self, message: str = "Invalid authentication credentials."):
         super().__init__(
-            message="Invalid authentication credentials.",
+            message=message,
             status_code=status.HTTP_401_UNAUTHORIZED,
             code="UNAUTHORIZED",
+        )
+
+
+class UnauthorizedException(ALPRPlatformException):
+    def __init__(self, message: str = "Could not validate credentials"):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            code="UNAUTHORIZED",
+        )
+
+
+class OAuthException(ALPRPlatformException):
+    def __init__(
+        self,
+        message: str,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+        code: str = "OAUTH_ERROR",
+    ):
+        super().__init__(
+            message=message,
+            status_code=status_code,
+            code=code,
+        )
+
+
+class ProviderNotConfiguredException(OAuthException):
+    def __init__(self, provider: str):
+        super().__init__(
+            message=f"OAuth provider '{provider}' is not configured on this server.",
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            code="NOT_IMPLEMENTED",
+        )
+
+
+class ProviderAPIException(OAuthException):
+    def __init__(self, provider: str, details: str):
+        super().__init__(
+            message=f"Error response from {provider}: {details}",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            code="BAD_GATEWAY",
         )
 
 

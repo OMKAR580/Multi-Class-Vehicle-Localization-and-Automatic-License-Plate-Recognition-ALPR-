@@ -1,19 +1,14 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.database import get_db
+from app.core.deps import get_current_user
+from app.models.user import User
 from app.schemas.user import UserResponse
 
 router = APIRouter()
 
+
 @router.get("/users/me", response_model=UserResponse, tags=["Users"])
-async def get_current_user(db: AsyncSession = Depends(get_db)):
+async def read_current_user(current_user: User = Depends(get_current_user)):
     """
     Get Currently Authenticated User Profile Endpoint.
     """
-    return UserResponse(
-        id="usr_demo_123",
-        email="demo.user@vehiclevision.ai",
-        full_name="Demo Operator",
-        is_active=True,
-        role="operator"
-    )
+    return UserResponse.model_validate(current_user)
