@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, String, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 
@@ -20,6 +20,10 @@ class User(BaseModel):
 
 class OAuthAccount(BaseModel):
     __tablename__ = "oauth_accounts"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_oauth_provider_user_id"),
+        UniqueConstraint("user_id", "provider", name="uq_user_provider"),
+    )
 
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     provider = Column(String(50), nullable=False)  # 'google', 'github'
