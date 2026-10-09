@@ -1,4 +1,5 @@
 from fastapi import Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -92,6 +93,65 @@ class ProviderAPIException(OAuthException):
         )
 
 
+class FileUploadException(ALPRPlatformException):
+    """Base exception for file upload and storage failures."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+        code: str = "FILE_ERROR",
+    ):
+        super().__init__(message=message, status_code=status_code, code=code)
+
+
+class PayloadTooLargeException(FileUploadException):
+    """Raised when an uploaded file exceeds the configured maximum size."""
+
+    def __init__(self, message: str = "File size exceeds the allowable limit."):
+        super().__init__(
+            message=message,
+            status_code=getattr(status, "HTTP_413_CONTENT_TOO_LARGE", 413),
+            code="FILE_TOO_LARGE",
+        )
+
+
+class UnsupportedMediaTypeException(FileUploadException):
+    """Raised when an uploaded file has an unsupported format or MIME type."""
+
+    def __init__(self, message: str = "Unsupported media format or type."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            code="UNSUPPORTED_MEDIA_TYPE",
+        )
+
+
+class InvalidFileException(FileUploadException):
+    """Raised when an uploaded file is empty, malformed, or corrupted."""
+
+    def __init__(self, message: str = "Invalid, malformed, or empty file."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="INVALID_FILE",
+        )
+
+
+class StorageException(FileUploadException):
+    """Raised when an underlying storage write, read, or deletion operation fails."""
+
+    def __init__(
+        self,
+        message: str = "A storage error occurred while processing the file.",
+    ):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="STORAGE_ERROR",
+        )
+
+
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     logger.warning("Handled %s on %s: %s", exc.code, request.url.path, exc.message)
     return JSONResponse(
@@ -117,6 +177,8 @@ async def http_exception_handler(
         403: "FORBIDDEN",
         404: "NOT_FOUND",
         405: "METHOD_NOT_ALLOWED",
+        413: "PAYLOAD_TOO_LARGE",
+        415: "UNSUPPORTED_MEDIA_TYPE",
     }
     code = code_map.get(exc.status_code, f"HTTP_{exc.status_code}")
     message = str(exc.detail) if isinstance(exc.detail, str) else "HTTP error"
@@ -134,7 +196,8 @@ async def http_exception_handler(
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    logger.warning("Validation error on %s: %s", request.url.path, exc.errors())
+    errors = jsonable_encoder(exc.errors())
+    logger.warning("Validation error on %s: %s", request.url.path, errors)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -142,7 +205,7 @@ async def validation_exception_handler(
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed.",
             },
-            "detail": exc.errors(),
+            "detail": errors,
             "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
         },
     )

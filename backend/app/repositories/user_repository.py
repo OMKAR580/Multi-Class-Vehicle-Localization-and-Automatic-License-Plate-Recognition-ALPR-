@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -38,6 +38,15 @@ class UserRepository:
         if user.email:
             user.email = user.email.lower().strip()
         self.session.add(user)
+        await self.session.commit()
+        await self.session.refresh(user)
+        return user
+
+    async def update(self, user: User, update_data: dict[str, Any]) -> User:
+        """Updates allowed attributes on an existing User record."""
+        for key, value in update_data.items():
+            if hasattr(user, key):
+                setattr(user, key, value)
         await self.session.commit()
         await self.session.refresh(user)
         return user
