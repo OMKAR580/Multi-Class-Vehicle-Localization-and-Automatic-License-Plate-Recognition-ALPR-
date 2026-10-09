@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import Depends, Request
+from fastapi import Cookie, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,16 +15,21 @@ security = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    access_token_cookie: Optional[str] = Cookie(None, alias="access_token"),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
-    FastAPI dependency to extract and validate the JWT Bearer token from the request header,
-    returning the currently authenticated User instance.
+    FastAPI dependency to extract and validate the JWT access token from header or cookie,
+    returning the currently authenticated and active User instance.
     """
-    if not credentials or not credentials.credentials:
-        raise UnauthorizedException("Authentication token missing")
+    token: Optional[str] = None
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+    elif access_token_cookie:
+        token = access_token_cookie
 
-    token = credentials.credentials
+    if not token:
+        raise UnauthorizedException("Authentication token missing")
 
     try:
         payload = jwt.decode(
