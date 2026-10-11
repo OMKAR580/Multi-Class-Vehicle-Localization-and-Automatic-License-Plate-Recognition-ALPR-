@@ -18,7 +18,9 @@ class DetectionRepository:
     async def get_by_id(self, job_id: str) -> Optional[DetectionJob]:
         """Fetch a DetectionJob by its unique ID."""
         result = await self.session.execute(
-            select(DetectionJob).where(DetectionJob.id == job_id)
+            select(DetectionJob)
+            .options(selectinload(DetectionJob.vehicles).selectinload(Vehicle.plate))
+            .where(DetectionJob.id == job_id)
         )
         return result.scalars().first()
 
@@ -91,9 +93,12 @@ class DetectionRepository:
 
         return jobs, total_count
 
-    async def create(self, job: DetectionJob) -> DetectionJob:
+    async def create(self, job: DetectionJob, commit: bool = True) -> DetectionJob:
         """Persist a new DetectionJob entity."""
         self.session.add(job)
-        await self.session.commit()
-        await self.session.refresh(job)
+        if commit:
+            await self.session.commit()
+            await self.session.refresh(job)
+        else:
+            await self.session.flush()
         return job

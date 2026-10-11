@@ -25,6 +25,7 @@ class RecognitionResponse(BaseModel):
     image_width: int = Field(..., description="Original image width in pixels.")
     image_height: int = Field(..., description="Original image height in pixels.")
     vehicles: List[VehicleResult] = Field(default_factory=list, description="List of detected vehicles and license plates.")
+    error_message: Optional[str] = Field(None, description="Detailed error description if execution failed.")
     created_at: datetime = Field(..., description="Detection job creation timestamp.")
 
 
