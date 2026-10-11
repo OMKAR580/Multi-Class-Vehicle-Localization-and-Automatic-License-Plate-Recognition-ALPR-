@@ -3,6 +3,7 @@
 import io
 import math
 import time
+import uuid
 from datetime import datetime
 from typing import Any, Optional, Union
 from PIL import Image
@@ -134,28 +135,33 @@ class RecognitionService:
             processing_time_ms=processing_time_ms,
             raw_result=raw_result_snapshot,
         )
-        await self.detection_repo.create(job)
+        try:
+            await self.detection_repo.create(job, commit=False)
 
-        for v_res in vehicle_results:
-            vehicle_entity = Vehicle(
-                detection_job_id=job.id,
-                vehicle_type=v_res.type,
-                confidence=v_res.confidence,
-                bbox=v_res.bbox,
-            )
-            self.db.add(vehicle_entity)
-            await self.db.flush()
-
-            if v_res.plate:
-                plate_entity = Plate(
-                    vehicle_id=vehicle_entity.id,
-                    plate_text=v_res.plate.text,
-                    confidence=v_res.plate.confidence,
-                    bbox=v_res.plate.bbox,
+            for v_res in vehicle_results:
+                vehicle_entity = Vehicle(
+                    detection_job_id=job.id,
+                    vehicle_type=v_res.type,
+                    confidence=v_res.confidence,
+                    bbox=v_res.bbox,
                 )
-                self.db.add(plate_entity)
+                self.db.add(vehicle_entity)
+                await self.db.flush()
 
-        await self.db.commit()
+                if v_res.plate:
+                    plate_entity = Plate(
+                        vehicle_id=vehicle_entity.id,
+                        plate_text=v_res.plate.text,
+                        confidence=v_res.plate.confidence,
+                        bbox=v_res.plate.bbox,
+                    )
+                    self.db.add(plate_entity)
+
+            await self.db.commit()
+            await self.db.refresh(job)
+        except Exception:
+            await self.db.rollback()
+            raise
 
         logger.info(
             "ALPR image recognition complete: job_id=%s, user_id=%s, file_id=%s, vehicles=%d, time=%.2fms",
@@ -256,9 +262,11 @@ class RecognitionService:
 
         processing_time_ms = round((time.perf_counter() - t0) * 1000, 2)
 
-        # 7. Construct initial response contract
+        # 7. Construct initial response contract with predetermined UUID
+        job_id = str(uuid.uuid4())
+        created_at = datetime.utcnow()
         response = VideoRecognitionResponse(
-            job_id="",
+            job_id=job_id,
             file_id=request.file_id,
             status="COMPLETED",
             processing_time_ms=processing_time_ms,
@@ -269,12 +277,14 @@ class RecognitionService:
             video_width=video_w,
             video_height=video_h,
             frames=frame_results,
-            created_at=datetime.utcnow(),
+            created_at=created_at,
         )
 
         # 8. Database persistence (DetectionJob)
         raw_result_dict = response.model_dump(mode="json")
         job = DetectionJob(
+            id=job_id,
+            created_at=created_at,
             user_id=current_user.id,
             status="COMPLETED",
             media_type="video",
@@ -282,36 +292,35 @@ class RecognitionService:
             processing_time_ms=processing_time_ms,
             raw_result=raw_result_dict,
         )
-        await self.detection_repo.create(job)
+        try:
+            await self.detection_repo.create(job, commit=False)
 
-        # Update response & stored snapshot with actual generated job.id
-        response.job_id = job.id
-        response.created_at = job.created_at
-        raw_result_dict["job_id"] = job.id
-        job.raw_result = raw_result_dict
-
-        # Persist Vehicle and Plate ORM entities
-        for f_res in frame_results:
-            for v_res in f_res.vehicles:
-                v_entity = Vehicle(
-                    detection_job_id=job.id,
-                    vehicle_type=v_res.type,
-                    confidence=v_res.confidence,
-                    bbox=v_res.bbox,
-                )
-                self.db.add(v_entity)
-                await self.db.flush()
-
-                if v_res.plate:
-                    p_entity = Plate(
-                        vehicle_id=v_entity.id,
-                        plate_text=v_res.plate.text,
-                        confidence=v_res.plate.confidence,
-                        bbox=v_res.plate.bbox,
+            # Persist Vehicle and Plate ORM entities
+            for f_res in frame_results:
+                for v_res in f_res.vehicles:
+                    v_entity = Vehicle(
+                        detection_job_id=job.id,
+                        vehicle_type=v_res.type,
+                        confidence=v_res.confidence,
+                        bbox=v_res.bbox,
                     )
-                    self.db.add(p_entity)
+                    self.db.add(v_entity)
+                    await self.db.flush()
 
-        await self.db.commit()
+                    if v_res.plate:
+                        p_entity = Plate(
+                            vehicle_id=v_entity.id,
+                            plate_text=v_res.plate.text,
+                            confidence=v_res.plate.confidence,
+                            bbox=v_res.plate.bbox,
+                        )
+                        self.db.add(p_entity)
+
+            await self.db.commit()
+            await self.db.refresh(job)
+        except Exception:
+            await self.db.rollback()
+            raise
 
         logger.info(
             "ALPR video recognition complete: job_id=%s, user_id=%s, file_id=%s, sampled_frames=%d, time=%.2fms",
@@ -350,7 +359,25 @@ class RecognitionService:
         if job.media_type != "video":
             raise ResourceNotFoundException("Video detection job", job_id)
 
-        return VideoRecognitionResponse.model_validate(job.raw_result)
+        if job.raw_result and isinstance(job.raw_result, dict):
+            resp = VideoRecognitionResponse.model_validate(job.raw_result)
+            resp.job_id = job.id
+            return resp
+        return VideoRecognitionResponse(
+            job_id=job.id,
+            file_id=job.media_url,
+            status=job.status,
+            processing_time_ms=job.processing_time_ms or 0.0,
+            video_fps=0.0,
+            total_frames=0,
+            sampled_frames_count=0,
+            duration_seconds=0.0,
+            video_width=0,
+            video_height=0,
+            frames=[],
+            error_message=job.error_message,
+            created_at=job.created_at,
+        )
 
     async def get_recognition_history(
         self,
@@ -457,7 +484,25 @@ class RecognitionService:
             raise UnauthorizedException("Access denied: You do not own this recognition job.")
 
         if job.media_type == "video":
-            return VideoRecognitionResponse.model_validate(job.raw_result)
+            if job.raw_result and isinstance(job.raw_result, dict):
+                resp = VideoRecognitionResponse.model_validate(job.raw_result)
+                resp.job_id = job.id
+                return resp
+            return VideoRecognitionResponse(
+                job_id=job.id,
+                file_id=job.media_url,
+                status=job.status,
+                processing_time_ms=job.processing_time_ms or 0.0,
+                video_fps=0.0,
+                total_frames=0,
+                sampled_frames_count=0,
+                duration_seconds=0.0,
+                video_width=0,
+                video_height=0,
+                frames=[],
+                error_message=job.error_message,
+                created_at=job.created_at,
+            )
         elif job.media_type == "image":
             if job.raw_result and isinstance(job.raw_result, dict):
                 return RecognitionResponse(
@@ -468,7 +513,26 @@ class RecognitionService:
                     image_width=job.raw_result.get("image_width", 0),
                     image_height=job.raw_result.get("image_height", 0),
                     vehicles=job.raw_result.get("vehicles", []),
+                    error_message=job.error_message,
                     created_at=job.created_at,
+                )
+            # Reconstruct vehicle results from ORM entities if raw_result is missing
+            veh_results = []
+            for v in (job.vehicles or []):
+                plate_res = None
+                if v.plate:
+                    plate_res = LicensePlateResult(
+                        text=v.plate.plate_text,
+                        confidence=v.plate.confidence,
+                        bbox=v.plate.bbox,
+                    )
+                veh_results.append(
+                    VehicleResult(
+                        type=v.vehicle_type,
+                        confidence=v.confidence,
+                        bbox=v.bbox,
+                        plate=plate_res,
+                    )
                 )
             return RecognitionResponse(
                 job_id=job.id,
@@ -477,7 +541,8 @@ class RecognitionService:
                 processing_time_ms=job.processing_time_ms or 0.0,
                 image_width=0,
                 image_height=0,
-                vehicles=[],
+                vehicles=veh_results,
+                error_message=job.error_message,
                 created_at=job.created_at,
             )
         else:
