@@ -152,6 +152,32 @@ class StorageException(FileUploadException):
         )
 
 
+class ModelNotConfiguredException(ALPRPlatformException):
+    """Raised when required AI model weights or runtime dependencies are missing."""
+
+    def __init__(self, message: str = "AI model weights or runtime engine not configured on server."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="MODEL_NOT_CONFIGURED",
+        )
+
+
+class RecognitionException(ALPRPlatformException):
+    """Raised when image processing or inference pipeline execution fails."""
+
+    def __init__(
+        self,
+        message: str = "An error occurred during ALPR recognition inference.",
+        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ):
+        super().__init__(
+            message=message,
+            status_code=status_code,
+            code="RECOGNITION_ERROR",
+        )
+
+
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     logger.warning("Handled %s on %s: %s", exc.code, request.url.path, exc.message)
     return JSONResponse(
@@ -179,6 +205,7 @@ async def http_exception_handler(
         405: "METHOD_NOT_ALLOWED",
         413: "PAYLOAD_TOO_LARGE",
         415: "UNSUPPORTED_MEDIA_TYPE",
+        503: "SERVICE_UNAVAILABLE",
     }
     code = code_map.get(exc.status_code, f"HTTP_{exc.status_code}")
     message = str(exc.detail) if isinstance(exc.detail, str) else "HTTP error"

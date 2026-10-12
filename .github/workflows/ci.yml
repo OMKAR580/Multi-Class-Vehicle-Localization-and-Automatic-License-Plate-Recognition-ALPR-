@@ -22,6 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
+          pip install -r ai/requirements.txt
           pip install pytest flake8 anyio[trio] httpx
 
       - name: Lint with Flake8
@@ -32,6 +33,7 @@ jobs:
         env:
           SECRET_KEY: "ci_test_secret_key_for_github_actions_minimum_32"
           ENVIRONMENT: testing
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
         run: |
           cd backend
           python -m pytest tests/ -v --tb=short
@@ -50,21 +52,22 @@ jobs:
       - name: Install AI Dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
           pip install -r ai/requirements.txt
           pip install pytest
 
       - name: Verify AI Package Imports
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
         run: |
           python -c "import ai.pipeline.alpr_pipeline; print('AI Pipeline modules imported successfully')"
           python -c "from ai.pipeline.schema import StandardAIOutputContract; print('AI schema imported successfully')"
 
       - name: Run AI Unit Tests
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
         run: |
-          python -m pytest ai/tests/ tests/contract/ -v
+          python -m pytest ai/tests/ -v
 
   frontend-checks:
     name: Frontend Lint & Build

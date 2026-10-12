@@ -78,6 +78,23 @@ class Settings(BaseSettings):
         default_factory=lambda: ["image/jpeg", "image/png", "video/mp4"]
     )
 
+    # Video Processing Limits & Configuration
+    MAX_VIDEO_SIZE_BYTES: int = 15 * 1024 * 1024  # 15 MB
+    MAX_VIDEO_DURATION_SECONDS: float = 60.0  # 60 seconds max duration
+    MAX_VIDEO_DIMENSION: int = 4096  # 4096px max dimension
+    VIDEO_SAMPLING_FPS: float = 1.0  # Sample 1 frame per second by default
+    MAX_VIDEO_FRAMES_PER_JOB: int = 60  # Max 60 frames sampled per job
+    MAX_VIDEO_PROCESSING_TIME_SECONDS: float = 30.0  # 30 seconds processing timeout
+
+    # AI Pipeline & ALPR Configuration
+    VEHICLE_MODEL_PATH: str = str(REPOSITORY_ROOT / "ai" / "models" / "yolov8_vehicle.pt")
+    PLATE_MODEL_PATH: str = str(REPOSITORY_ROOT / "ai" / "models" / "yolov8_plate.pt")
+    MIN_VEHICLE_CONFIDENCE: float = 0.40
+    MIN_PLATE_CONFIDENCE: float = 0.40
+    MIN_OCR_CONFIDENCE: float = 0.30
+    MAX_INFERENCE_IMAGE_DIMENSION: int = 4096
+    INFERENCE_TIMEOUT_SECONDS: int = 15
+
     model_config = SettingsConfigDict(
         env_file=(".env", str(BACKEND_DIR / ".env"), str(REPOSITORY_ROOT / ".env")),
         env_file_encoding="utf-8",
