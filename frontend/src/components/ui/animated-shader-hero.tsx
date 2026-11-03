@@ -25,6 +25,7 @@ export interface HeroProps {
   };
   className?: string;
   monochrome?: boolean;
+  theme?: 'dark' | 'light';
 }
 
 // Reusable Shader Background Hook
@@ -45,8 +46,8 @@ export const useShaderBackground = (theme: 'dark' | 'light' = 'dark') => {
     private scale: number;
     private shaderSource: string;
     private currentTheme: 'dark' | 'light';
-    private mouseMove = [0, 0];
-    private mouseCoords = [0, 0];
+    private mouseMove: [number, number] = [0, 0];
+    private mouseCoords: [number, number] = [0, 0];
     private pointerCoords = [0, 0];
     private nbrOfPointers = 0;
 
@@ -77,11 +78,11 @@ void main(){gl_Position=position;}`;
     }
 
     updateMove(deltas: number[]) {
-      this.mouseMove = deltas;
+      this.mouseMove = [deltas[0] ?? 0, deltas[1] ?? 0];
     }
 
     updateMouse(coords: number[]) {
-      this.mouseCoords = coords;
+      this.mouseCoords = [coords[0] ?? 0, coords[1] ?? 0];
     }
 
     updatePointerCoords(coords: number[]) {
@@ -194,8 +195,8 @@ void main(){gl_Position=position;}`;
 
       gl.uniform2f((program as any).resolution, this.canvas.width, this.canvas.height);
       gl.uniform1f((program as any).time, now * 1e-3);
-      gl.uniform2f((program as any).move, ...this.mouseMove);
-      gl.uniform2f((program as any).touch, ...this.mouseCoords);
+      gl.uniform2f((program as any).move, this.mouseMove[0], this.mouseMove[1]);
+      gl.uniform2f((program as any).touch, this.mouseCoords[0], this.mouseCoords[1]);
       gl.uniform1i((program as any).pointerCount, this.nbrOfPointers);
       gl.uniform2fv((program as any).pointers, this.pointerCoords);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -358,7 +359,7 @@ export const ShaderBackground: React.FC<{
     <canvas
       ref={canvasRef}
       className={`absolute inset-0 w-full h-full object-cover touch-none pointer-events-none transition-opacity duration-500 ${className}`}
-      style={{ background: resolvedTheme === 'light' ? '#F5F2EB' : '#000000' }}
+      style={{ background: resolvedTheme === 'light' ? '#E8DEC8' : '#000000' }}
     />
   );
 };
@@ -371,8 +372,9 @@ export const Hero: React.FC<HeroProps> = ({
   buttons,
   className = '',
   monochrome = true,
+  theme = 'dark',
 }) => {
-  const canvasRef = useShaderBackground(monochrome);
+  const canvasRef = useShaderBackground(theme);
 
   return (
     <div className={`relative w-full h-screen overflow-hidden bg-black ${className}`}>
