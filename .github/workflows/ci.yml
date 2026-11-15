@@ -93,11 +93,12 @@ jobs:
         run: |
           cd frontend
           npm install
+          npm install @next/swc-linux-x64-gnu@14.2.35 --no-save || true
 
       - name: Build Next.js Application
         run: |
           cd frontend
-          CI="" npm run build
+          NODE_OPTIONS="--max-old-space-size=4096" npm run build 2>&1 | tee build.log || (cat build.log >> $GITHUB_STEP_SUMMARY && cat build.log && exit 1)
         env:
           NEXT_PUBLIC_API_URL: "https://api.visionplate.ai/api/v1"
           NEXT_PUBLIC_APP_URL: "https://visionplate.vercel.app"
