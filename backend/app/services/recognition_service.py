@@ -119,11 +119,23 @@ class RecognitionService:
                 )
             )
 
+        # Generate annotated visualization if available
+        annotated_b64: Optional[str] = None
+        try:
+            from ai.visualization.annotator import PipelineVisualizer
+            vis = PipelineVisualizer()
+            with Image.open(io.BytesIO(image_bytes)) as pil_img:
+                annotated_bgr = vis.annotate(pil_img, ai_contract)
+                annotated_b64 = vis.to_base64(annotated_bgr, format="JPEG")
+        except Exception as vis_exc:
+            logger.warning("PipelineVisualizer annotation skipped: %s", vis_exc)
+
         raw_result_snapshot = {
             "image_id": request.file_id,
             "image_width": image_width,
             "image_height": image_height,
             "vehicles": [v.model_dump() for v in vehicle_results],
+            "annotated_image": annotated_b64,
         }
 
         # 6. Database persistence (DetectionJob, Vehicle, Plate)
@@ -180,6 +192,7 @@ class RecognitionService:
             image_width=image_width,
             image_height=image_height,
             vehicles=vehicle_results,
+            annotated_image=annotated_b64,
             created_at=job.created_at,
         )
 
@@ -384,68 +397,119 @@ class RecognitionService:
         current_user: User,
         page: int = 1,
         page_size: int = 10,
+        search: Optional[str] = None,
         media_type: Optional[str] = None,
         status: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        vehicle_class: Optional[str] = None,
     ) -> RecognitionHistoryResponse:
         """
-        Retrieves paginated recognition job history for the authenticated user.
+        Retrieves paginated recognition job history for the authenticated user with search and filtering.
 
         Args:
             current_user: Currently authenticated user.
             page: 1-indexed page number.
             page_size: Number of items per page.
+            search: Optional search text (job ID, filename, plate text, vehicle class).
             media_type: Optional media type filter ('image', 'video').
-            status: Optional execution status filter ('COMPLETED', 'FAILED', 'PENDING').
+            status: Optional execution status filter ('COMPLETED', 'FAILED', 'PENDING', 'PROCESSING').
+            start_date: Optional inclusive start datetime.
+            end_date: Optional inclusive end datetime.
+            vehicle_class: Optional vehicle category filter.
 
         Returns:
             RecognitionHistoryResponse: Paginated container with summary items.
         """
-        if media_type and media_type not in ("image", "video"):
+        if media_type and media_type.lower() != "all" and media_type not in ("image", "video"):
             raise InvalidFileException("Invalid media_type filter. Allowed values: 'image', 'video'.")
 
-        if status and status not in ("COMPLETED", "FAILED", "PENDING", "PROCESSING"):
+        if status and status.upper() != "ALL" and status not in ("COMPLETED", "FAILED", "PENDING", "PROCESSING"):
             raise InvalidFileException("Invalid status filter. Allowed values: 'COMPLETED', 'FAILED', 'PENDING', 'PROCESSING'.")
 
         jobs, total = await self.detection_repo.list_by_user_paginated(
             user_id=current_user.id,
             page=page,
             page_size=page_size,
+            search=search,
             media_type=media_type,
             status=status,
+            start_date=start_date,
+            end_date=end_date,
+            vehicle_class=vehicle_class,
         )
 
         items: list[RecognitionHistoryItem] = []
         for job in jobs:
             v_count = 0
             p_count = 0
+            plates_list: list[str] = []
+            veh_types_list: list[str] = []
 
-            if job.raw_result and isinstance(job.raw_result, dict):
+            if job.vehicles:
+                v_count = len(job.vehicles)
+                for v in job.vehicles:
+                    if v.vehicle_type and v.vehicle_type not in veh_types_list:
+                        veh_types_list.append(v.vehicle_type)
+                    if v.plate and v.plate.plate_text and v.plate.plate_text.strip():
+                        p_count += 1
+                        txt = v.plate.plate_text.strip()
+                        if txt not in plates_list:
+                            plates_list.append(txt)
+            elif job.raw_result and isinstance(job.raw_result, dict):
                 raw = job.raw_result
                 if job.media_type == "image":
                     vehicles_data = raw.get("vehicles", [])
                     v_count = len(vehicles_data)
-                    p_count = sum(1 for v in vehicles_data if isinstance(v, dict) and v.get("plate"))
+                    for v in vehicles_data:
+                        if isinstance(v, dict):
+                            t = v.get("type")
+                            if t and t not in veh_types_list:
+                                veh_types_list.append(t)
+                            p = v.get("plate")
+                            if p and isinstance(p, dict) and p.get("text"):
+                                txt = p["text"].strip()
+                                if txt:
+                                    p_count += 1
+                                    if txt not in plates_list:
+                                        plates_list.append(txt)
                 elif job.media_type == "video":
                     frames_data = raw.get("frames", [])
                     for f in frames_data:
                         if isinstance(f, dict):
                             f_vehicles = f.get("vehicles", [])
                             v_count += len(f_vehicles)
-                            p_count += sum(1 for v in f_vehicles if isinstance(v, dict) and v.get("plate"))
-            else:
-                v_count = len(job.vehicles)
-                p_count = sum(1 for v in job.vehicles if v.plate is not None)
+                            for v in f_vehicles:
+                                if isinstance(v, dict):
+                                    t = v.get("type")
+                                    if t and t not in veh_types_list:
+                                        veh_types_list.append(t)
+                                    p = v.get("plate")
+                                    if p and isinstance(p, dict) and p.get("text"):
+                                        txt = p["text"].strip()
+                                        if txt:
+                                            p_count += 1
+                                            if txt not in plates_list:
+                                                plates_list.append(txt)
+
+            # Extract safe filename from media_url or raw_result
+            safe_filename = None
+            if job.media_url:
+                safe_filename = job.media_url.replace("\\", "/").split("/")[-1]
 
             items.append(
                 RecognitionHistoryItem(
                     job_id=job.id,
                     media_type=job.media_type,
                     media_url=job.media_url,
+                    filename=safe_filename,
                     status=job.status,
                     processing_time_ms=job.processing_time_ms,
                     error_message=job.error_message,
                     vehicle_count=v_count,
                     plate_count=p_count,
+                    plates=plates_list,
+                    vehicle_types=veh_types_list,
                     created_at=job.created_at,
                 )
             )
@@ -483,14 +547,20 @@ class RecognitionService:
         if job.user_id != current_user.id:
             raise UnauthorizedException("Access denied: You do not own this recognition job.")
 
+        safe_filename = None
+        if job.media_url:
+            safe_filename = job.media_url.replace("\\", "/").split("/")[-1]
+
         if job.media_type == "video":
             if job.raw_result and isinstance(job.raw_result, dict):
                 resp = VideoRecognitionResponse.model_validate(job.raw_result)
                 resp.job_id = job.id
+                resp.filename = safe_filename
                 return resp
             return VideoRecognitionResponse(
                 job_id=job.id,
                 file_id=job.media_url,
+                filename=safe_filename,
                 status=job.status,
                 processing_time_ms=job.processing_time_ms or 0.0,
                 video_fps=0.0,
@@ -508,11 +578,13 @@ class RecognitionService:
                 return RecognitionResponse(
                     job_id=job.id,
                     file_id=job.raw_result.get("image_id", job.media_url),
+                    filename=safe_filename,
                     status=job.status,
                     processing_time_ms=job.processing_time_ms or 0.0,
                     image_width=job.raw_result.get("image_width", 0),
                     image_height=job.raw_result.get("image_height", 0),
                     vehicles=job.raw_result.get("vehicles", []),
+                    annotated_image=job.raw_result.get("annotated_image"),
                     error_message=job.error_message,
                     created_at=job.created_at,
                 )
@@ -537,6 +609,7 @@ class RecognitionService:
             return RecognitionResponse(
                 job_id=job.id,
                 file_id=job.media_url,
+                filename=safe_filename,
                 status=job.status,
                 processing_time_ms=job.processing_time_ms or 0.0,
                 image_width=0,

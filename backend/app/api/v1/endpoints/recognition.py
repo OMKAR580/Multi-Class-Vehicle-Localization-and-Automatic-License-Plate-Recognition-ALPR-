@@ -1,11 +1,12 @@
 """API endpoints for Vehicle Detection and License Plate Recognition (ALPR)."""
 
+from datetime import datetime
 from typing import Optional, Union
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_alpr_pipeline
 from app.models.user import User
 from app.schemas.recognition import (
     ImageRecognitionRequest,
@@ -63,9 +64,10 @@ async def recognize_image(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     storage: BaseStorageService = Depends(get_storage_service),
+    pipeline = Depends(get_alpr_pipeline),
 ) -> RecognitionResponse:
     """Handle authenticated vehicle detection and ALPR inference request for uploaded images."""
-    service = RecognitionService(db=db, storage=storage)
+    service = RecognitionService(db=db, storage=storage, pipeline=pipeline)
     return await service.process_image_recognition(request=request, current_user=current_user)
 
 
@@ -116,9 +118,10 @@ async def recognize_video(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     storage: BaseStorageService = Depends(get_storage_service),
+    pipeline = Depends(get_alpr_pipeline),
 ) -> VideoRecognitionResponse:
     """Handle authenticated frame-based video ALPR recognition request."""
-    service = RecognitionService(db=db, storage=storage)
+    service = RecognitionService(db=db, storage=storage, pipeline=pipeline)
     return await service.process_video_recognition(request=request, current_user=current_user)
 
 
@@ -149,8 +152,12 @@ Fetch paginated recognition job history belonging to the currently authenticated
 async def list_recognition_history(
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)."),
     page_size: int = Query(default=10, ge=1, le=100, description="Items per page."),
+    search: Optional[str] = Query(default=None, description="Search term matching job ID, filename, plate text, or vehicle class."),
     media_type: Optional[str] = Query(default=None, description="Filter by media category ('image' or 'video')."),
-    job_status: Optional[str] = Query(default=None, alias="status", description="Filter by status ('COMPLETED', 'FAILED', 'PENDING')."),
+    job_status: Optional[str] = Query(default=None, alias="status", description="Filter by status ('COMPLETED', 'FAILED', 'PENDING', 'PROCESSING')."),
+    start_date: Optional[datetime] = Query(default=None, description="Filter by start date (inclusive ISO format)."),
+    end_date: Optional[datetime] = Query(default=None, description="Filter by end date (inclusive ISO format)."),
+    vehicle_class: Optional[str] = Query(default=None, description="Filter by vehicle class (e.g., 'car', 'truck', 'bus', 'motorbike')."),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     storage: BaseStorageService = Depends(get_storage_service),
@@ -161,8 +168,12 @@ async def list_recognition_history(
         current_user=current_user,
         page=page,
         page_size=page_size,
+        search=search,
         media_type=media_type,
         status=job_status,
+        start_date=start_date,
+        end_date=end_date,
+        vehicle_class=vehicle_class,
     )
 
 

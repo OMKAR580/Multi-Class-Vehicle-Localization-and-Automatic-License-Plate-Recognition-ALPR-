@@ -3,7 +3,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import IntelligencePipelineSection from '@/components/sections/IntelligencePipelineSection';
+import MultiClassVehicleSection from '@/components/sections/MultiClassVehicleSection';
+import AIDetectionShowcase from '@/components/sections/AIDetectionShowcase';
+import EnterpriseApplicationsSection from '@/components/sections/EnterpriseApplicationsSection';
+import IndianRegistrationSection from '@/components/sections/IndianRegistrationSection';
+import DeveloperIntegrationSection from '@/components/sections/DeveloperIntegrationSection';
+import FinalCTASection from '@/components/sections/FinalCTASection';
+import ScrollReveal from '@/components/ui/scroll-reveal';
 import Link from 'next/link';
+import { AuthService } from '@/lib/auth';
 import { ShaderBackground } from '@/components/ui/animated-shader-hero';
 import {
   Scan,
@@ -112,6 +121,22 @@ export default function HomePage() {
   const vehicle = VEHICLES[activeVehicleIndex];
   const animRef = useRef<number | null>(null);
 
+  // Authentication State: reflects whether user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsLoggedIn(AuthService.isAuthenticated());
+    };
+    checkAuth();
+    window.addEventListener('visionplate_auth_change', checkAuth);
+    window.addEventListener('storage', checkAuth);
+    return () => {
+      window.removeEventListener('visionplate_auth_change', checkAuth);
+      window.removeEventListener('storage', checkAuth);
+    };
+  }, []);
+
   // Initialize theme from localStorage or system preference
   useEffect(() => {
     try {
@@ -210,7 +235,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className={`relative min-h-screen flex flex-col justify-between overflow-x-hidden transition-colors duration-400 ${
+    <div className={`relative min-h-screen flex flex-col justify-between overflow-x-clip transition-colors duration-400 ${
       theme === 'dark'
         ? 'bg-black text-white selection:bg-[#E8E2D5] selection:text-black'
         : 'bg-[#E8DEC8] text-[#1A1815] selection:bg-[#1A1815] selection:text-white'
@@ -243,93 +268,119 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* SINGLE-VIEWPORT HERO: LEFT TEXT + RIGHT REAL-TIME SCANNER ANIMATION */}
       {/* ========================================================================= */}
-      <main className="relative z-10 flex-1 flex flex-col justify-center max-w-[1440px] w-full mx-auto px-5 sm:px-8 lg:px-12 py-6 lg:py-8">
+      <main id="hero" className="relative z-10 flex-1 flex flex-col justify-center max-w-[1440px] w-full mx-auto px-5 sm:px-8 lg:px-12 py-6 lg:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           {/* ------------------------------------------------------------------- */}
           {/* LEFT SIDE: LUXURY EDITORIAL COPY & INTERFACE (From Image 2 / Vesper) */}
           {/* ------------------------------------------------------------------- */}
           <div className="lg:col-span-5 flex flex-col items-start text-left">
-            {/* Vesper-style Luxury Badge */}
-            <div className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border text-[12.5px] font-normal tracking-[-0.01em] mb-6 transition-colors ${
+            {/* Vesper-style Luxury Badge with Shimmer & Ambient Glass Glow */}
+            <div className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border text-[12.5px] font-normal tracking-[-0.01em] mb-6 transition-all duration-300 shadow-sm ${
               theme === 'dark'
-                ? 'border-white/[0.18] bg-white/[0.04] backdrop-blur-md text-[#EFECE6] shadow-[0_0_20px_rgba(245,242,235,0.08)]'
-                : 'border-[#C7BBA5] bg-[#FAF8F5]/90 backdrop-blur-md text-[#1A1815] shadow-xs'
+                ? 'border-white/[0.22] bg-white/[0.05] backdrop-blur-xl text-[#FAF8F5] shadow-[0_0_24px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.2)]'
+                : 'border-[#BAAC94] bg-[#FAF8F5]/95 backdrop-blur-xl text-[#1A1815] shadow-[0_2px_12px_rgba(50,40,25,0.08),inset_0_1px_0_#FFFFFF]'
             }`}>
-              <svg
-                className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-[#F5F2EB] drop-shadow-[0_0_4px_rgba(255,255,255,0.6)]' : 'text-[#1A1815]'}`}
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2.6C12.55 2.6 12.88 3.15 13.08 4.7c.62 4.7 1.52 5.6 6.22 6.22 1.55.2 2.1.53 2.1 1.08s-.55.88-2.1 1.08c-4.7.62-5.6 1.52-6.22 6.22-.2 1.55-.53 2.1-1.08 2.1s-.88-.55-1.08-2.1c-.62-4.7-1.52-5.6-6.22-6.22C3.15 12.88 2.6 12.55 2.6 12s.55-.88 2.1-1.08c4.7-.62 5.6-1.52 6.22-6.22C11.12 3.15 11.45 2.6 12 2.6Z" />
-              </svg>
-              <span>Operational AI Traffic Infrastructure</span>
+              <Sparkles
+                className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]' : 'text-amber-700'}`}
+              />
+              <span className="font-medium">Operational AI Traffic Infrastructure</span>
               <span className={theme === 'dark' ? 'text-white/30' : 'text-[#A0988A]'}>•</span>
-              <span className={theme === 'dark' ? 'text-[#D3C9B8]' : 'text-[#4A4235] font-semibold'}>YOLOv8 + Indian OCR</span>
+              <span className={`font-semibold ${theme === 'dark' ? 'text-amber-300' : 'text-amber-800'}`}>YOLOv8 + Indian OCR</span>
             </div>
 
-            {/* Main Headline with Instrument Serif Italic Accent */}
-            <h1 className={`text-3xl sm:text-4xl lg:text-[44px] xl:text-[50px] font-medium tracking-[-0.04em] leading-[1.12] mb-5 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-[#1A1815] font-semibold'
-            }`}>
-              Localize vehicles &{' '}
-              <span className={`font-serif-italic font-normal tracking-[-0.02em] ${
-                theme === 'dark' ? 'text-[#d8d8d8]' : 'text-[#52493B]'
-              }`}>
-                extract number plates
-              </span>{' '}
-              in real-time.
+            {/* Main Headline with High-Impact Psychological Rhythmic Hierarchy */}
+            <h1 className="mb-6 flex flex-col items-start leading-[1.08] transition-colors">
+              {/* Line 1: Primary Heavy Impact */}
+              <span
+                className={`text-4xl sm:text-5xl lg:text-[48px] xl:text-[56px] font-bold tracking-[-0.035em] transition-colors ${
+                  theme === 'dark' ? 'text-white' : 'text-[#1A1815]'
+                }`}
+              >
+                Localize vehicles
+              </span>
+
+              {/* Line 2: Editorial Luxury Serif Contrast (Craft & Specialized ALPR) */}
+              <span
+                className={`text-3xl sm:text-4xl lg:text-[38px] xl:text-[44px] font-serif-italic font-normal tracking-[-0.02em] my-1 sm:my-1.5 transition-colors ${
+                  theme === 'dark' ? 'text-[#dedad0]' : 'text-[#504637]'
+                }`}
+              >
+                & extract number plates
+              </span>
+
+              {/* Line 3: High-Energy Telemetry Punchline */}
+              <span
+                className={`text-4xl sm:text-5xl lg:text-[48px] xl:text-[56px] font-bold tracking-[-0.035em] transition-colors ${
+                  theme === 'dark' ? 'text-white' : 'text-[#1A1815]'
+                }`}
+              >
+                in real-time.
+              </span>
             </h1>
 
             {/* Lede Text */}
-            <p className={`text-[14.5px] sm:text-[15.5px] font-normal leading-[1.58] tracking-[-0.015em] mb-7 max-w-lg transition-colors ${
-              theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#5A5245]'
+            <p className={`text-[15px] sm:text-[16px] font-normal leading-[1.62] tracking-[-0.015em] mb-7 max-w-lg transition-colors ${
+              theme === 'dark' ? 'text-[#a39f97]' : 'text-[#5A5245]'
             }`}>
               Engineered for the chaotic reality of Indian roadways. Real-time localization across 8 Indian vehicle
               classes with sub-second license plate OCR and verified RTO regex.
             </p>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 mb-7">
+            {/* Action Buttons with Liquid Glass Prismatic Reflections */}
+            <div className="flex flex-wrap items-center gap-3.5 mb-8">
+              <Link
+                href="/app/dashboard"
+                prefetch={true}
+                className="btn-liquid-primary group relative inline-flex items-center justify-center px-6 sm:px-7 py-3 sm:py-3.5 rounded-[11px] text-[14px] font-semibold tracking-[-0.02em] cursor-pointer"
+              >
+                {/* Liquid reflection sheen light sweep */}
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full group-hover:translate-x-full duration-1000 transition-transform pointer-events-none" />
+                <span className="relative z-10 flex items-center">
+                  <span>{isLoggedIn ? 'Dashboard' : 'Get Started Free'}</span>
+                  <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                </span>
+              </Link>
+
               <button
                 onClick={handleTriggerInstantScan}
-                className={`inline-flex items-center justify-center px-5 py-2.5 rounded-[7px] text-[13.5px] font-medium tracking-[-0.02em] transition-all cursor-pointer ${
-                  theme === 'dark'
-                    ? 'btn-solid-beige text-black'
-                    : 'btn-solid-dark text-white'
-                }`}
+                className="btn-liquid-glass group relative inline-flex items-center justify-center px-5 sm:px-6 py-3 sm:py-3.5 rounded-[11px] text-[14px] font-medium tracking-[-0.02em] cursor-pointer"
               >
-                <span>Trigger Instant Scan</span>
-                <ArrowRight className="w-4 h-4 ml-1.5" />
+                {/* Liquid reflection sheen light sweep */}
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full duration-1000 transition-transform pointer-events-none" />
+                <span className="relative z-10 flex items-center">
+                  <Play className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:scale-110" />
+                  <span>Trigger Instant Scan</span>
+                </span>
               </button>
-
-              <Link
-                href="/app/detect"
-                className={`inline-flex items-center justify-center px-4 py-2.5 rounded-[7px] text-[13.5px] font-normal tracking-[-0.02em] transition-all ${
-                  theme === 'dark'
-                    ? 'btn-ghost-beige text-[#E8E2D5]'
-                    : 'btn-ghost-dark text-[#1A1815]'
-                }`}
-              >
-                <Scan className={`w-4 h-4 mr-2 ${theme === 'dark' ? 'text-[#E8E2D5]' : 'text-[#1A1815]'}`} />
-                <span>Studio HUD</span>
-              </Link>
             </div>
 
-            {/* Quick 3-Key Metric Strip */}
-            <div className={`grid grid-cols-3 gap-3 w-full max-w-md pt-5 border-t transition-colors ${
-              theme === 'dark' ? 'border-white/[0.08]' : 'border-[#C7BBA5]'
-            }`}>
-              <div>
-                <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-[#1A1815]'}`}>99.4%</div>
-                <div className={`text-[11px] ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>Plate Precision</div>
+            {/* Quick 3-Key Metric Telemetry Instrument Tiles */}
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 w-full max-w-lg pt-2">
+              <div className={`p-3 sm:p-3.5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02] ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-b from-white/[0.06] to-white/[0.02] border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.4)]'
+                  : 'bg-gradient-to-b from-white/90 to-[#F6F1E7]/80 border-[#C7BBA5]/90 shadow-[inset_0_1px_0_#FFFFFF,0_4px_14px_rgba(50,35,15,0.06)]'
+              }`}>
+                <div className={`text-lg sm:text-xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-[#1A1815]'}`}>99.4%</div>
+                <div className={`text-[11px] sm:text-[11.5px] font-medium mt-0.5 ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>Plate Precision</div>
               </div>
-              <div>
-                <div className="text-sm font-semibold text-[#D49E35]">&lt; 18 ms</div>
-                <div className={`text-[11px] ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>Neural Latency</div>
+
+              <div className={`p-3 sm:p-3.5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02] ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-b from-white/[0.06] to-white/[0.02] border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.4)]'
+                  : 'bg-gradient-to-b from-white/90 to-[#F6F1E7]/80 border-[#C7BBA5]/90 shadow-[inset_0_1px_0_#FFFFFF,0_4px_14px_rgba(50,35,15,0.06)]'
+              }`}>
+                <div className="text-lg sm:text-xl font-bold tracking-tight text-amber-500 sm:text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.35)]">&lt; 18 ms</div>
+                <div className={`text-[11px] sm:text-[11.5px] font-medium mt-0.5 ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>Neural Latency</div>
               </div>
-              <div>
-                <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-[#1A1815]'}`}>8 Classes</div>
-                <div className={`text-[11px] ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>Indian Vehicles</div>
+
+              <div className={`p-3 sm:p-3.5 rounded-2xl border backdrop-blur-md transition-all duration-300 hover:scale-[1.02] ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-b from-white/[0.06] to-white/[0.02] border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.4)]'
+                  : 'bg-gradient-to-b from-white/90 to-[#F6F1E7]/80 border-[#C7BBA5]/90 shadow-[inset_0_1px_0_#FFFFFF,0_4px_14px_rgba(50,35,15,0.06)]'
+              }`}>
+                <div className={`text-lg sm:text-xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-[#1A1815]'}`}>8 Classes</div>
+                <div className={`text-[11px] sm:text-[11.5px] font-medium mt-0.5 ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>Indian Vehicles</div>
               </div>
             </div>
           </div>
@@ -338,111 +389,122 @@ export default function HomePage() {
           {/* RIGHT SIDE: REAL-TIME PHOTOREALISTIC ROADWAY & SCANNER HUD */}
           {/* ------------------------------------------------------------------- */}
           <div className="lg:col-span-7 w-full flex flex-col items-center relative">
-            {/* 3D Atmospheric Ambilight Glow / Studio Cast Shadow */}
+            {/* 3D Atmospheric Ambilight Volumetric Halo */}
             <div
-              className={`absolute -inset-4 sm:-inset-8 rounded-[40px] pointer-events-none transition-all duration-700 ${
+              className={`absolute -inset-6 sm:-inset-10 rounded-[50px] pointer-events-none transition-all duration-700 ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-tr from-amber-500/[0.12] via-white/[0.10] to-cyan-500/[0.08] blur-3xl opacity-80'
-                  : 'bg-gradient-to-b from-[#2E2314]/30 via-[#3B2D1B]/20 to-[#4A3922]/15 blur-3xl opacity-90'
+                  ? 'bg-gradient-to-tr from-amber-500/[0.18] via-white/[0.12] to-cyan-500/[0.12] blur-3xl opacity-90'
+                  : 'bg-gradient-to-b from-[#2E2314]/35 via-[#4A3922]/25 to-[#6E5432]/20 blur-3xl opacity-95'
               }`}
             />
 
-            {/* 3D Computer Monitor Outer CNC-Milled Chassis / Frame */}
+            {/* 3D Computer Monitor Outer CNC-Milled Titanium / Quartz Chassis */}
             <div
-              className={`relative w-full rounded-[24px] sm:rounded-[28px] md:rounded-[32px] p-2 sm:p-2.5 md:p-3 pb-2 sm:pb-2.5 md:pb-3 border-2 transition-all duration-300 z-10 ${
+              className={`relative w-full rounded-[26px] sm:rounded-[30px] md:rounded-[34px] p-2.5 sm:p-3 md:p-3.5 pb-2.5 sm:pb-3 md:pb-3.5 border-2 transition-all duration-300 z-10 ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-b from-[#2B2926] via-[#171615] to-[#0D0D0C] border-white/[0.22] shadow-[0_0_80px_rgba(255,255,255,0.08),0_30px_70px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_2px_rgba(0,0,0,0.9)]'
-                  : 'bg-gradient-to-b from-[#FAF7F0] via-[#DDD4C3] to-[#B3A690] border-[#7D705C] shadow-[0_32px_75px_-12px_rgba(35,26,14,0.48),0_16px_36px_-6px_rgba(35,26,14,0.32),0_4px_12px_rgba(35,26,14,0.22),inset_0_1.5px_0_#FFFFFF,inset_0_-2.5px_4px_rgba(50,40,25,0.35)]'
+                  ? 'bg-gradient-to-b from-[#34312D] via-[#1B1A18] to-[#0A0A09] border-white/[0.28] shadow-[0_0_110px_rgba(255,255,255,0.12),0_35px_85px_rgba(0,0,0,0.95),inset_0_1.5px_1px_rgba(255,255,255,0.45),inset_0_-2px_3px_rgba(0,0,0,0.9)] ring-1 ring-white/10'
+                  : 'bg-gradient-to-b from-[#FFFDF9] via-[#E8DFCF] to-[#B5A58D] border-[#7D705C] shadow-[0_36px_85px_-12px_rgba(35,26,14,0.52),0_18px_42px_-6px_rgba(35,26,14,0.35),0_4px_14px_rgba(35,26,14,0.25),inset_0_2px_0_#FFFFFF,inset_0_-3px_5px_rgba(50,40,25,0.38)] ring-1 ring-[#FFFDF9]/60'
               }`}
             >
-              {/* Top Specular Chamfer Highlight */}
+              {/* CNC Chamfer Specular Edge Reflection Lines */}
               <div
-                className={`absolute inset-x-8 top-0 h-[1.5px] pointer-events-none ${
+                className={`absolute inset-x-12 top-0 h-[2px] pointer-events-none ${
                   theme === 'dark'
-                    ? 'bg-gradient-to-r from-transparent via-white/50 to-transparent'
+                    ? 'bg-gradient-to-r from-transparent via-white/70 to-transparent'
                     : 'bg-gradient-to-r from-transparent via-white to-transparent'
                 }`}
               />
+              <div
+                className={`absolute inset-x-24 bottom-0 h-[1.5px] pointer-events-none ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-r from-transparent via-white/20 to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-white/60 to-transparent'
+                }`}
+              />
 
-              {/* Top Bezel Center: High-Precision Integrated Camera & Optical Sensor Array */}
-              <div className="absolute top-1 sm:top-1.5 inset-x-0 flex items-center justify-center pointer-events-none z-30">
+              {/* Top Bezel Center: High-Precision Sapphire Camera & Optical Sensor Array */}
+              <div className="absolute top-1.5 sm:top-2 inset-x-0 flex items-center justify-center pointer-events-none z-30">
                 <div
-                  className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border shadow-sm ${
+                  className={`flex items-center gap-1.5 px-3 py-0.5 rounded-full border shadow-md ${
                     theme === 'dark'
-                      ? 'bg-black/90 border-white/10'
-                      : 'bg-[#151311] border-black/40 ring-1 ring-white/30'
+                      ? 'bg-[#0E0D0C] border-white/20 ring-1 ring-white/10'
+                      : 'bg-[#151311] border-black/40 ring-1 ring-white/40'
                   }`}
                 >
                   <div className="w-0.5 h-0.5 rounded-full bg-neutral-600" />
-                  <div className="relative w-2 h-2 rounded-full bg-[#050505] ring-1 ring-white/30 flex items-center justify-center">
-                    <div className="w-1 h-1 rounded-full bg-blue-900/90" />
+                  <div className="relative w-2.5 h-2.5 rounded-full bg-[#050505] ring-1 ring-white/40 flex items-center justify-center shadow-inner">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-tr from-blue-700 via-indigo-900 to-cyan-500/80" />
+                    <div className="absolute top-0.5 right-0.5 w-0.5 h-0.5 rounded-full bg-white/70" />
                   </div>
-                  <div className="w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
                   <div className="w-0.5 h-0.5 rounded-full bg-neutral-600" />
                 </div>
               </div>
 
               {/* Inner Screen Display (Recessed Glass Frame) */}
               <div
-                className={`relative w-full rounded-[14px] sm:rounded-[18px] border-2 overflow-hidden backdrop-blur-2xl transition-all duration-300 ${
+                className={`relative w-full rounded-[16px] sm:rounded-[20px] border-2 overflow-hidden backdrop-blur-2xl transition-all duration-300 ${
                   theme === 'dark'
-                    ? 'border-black/90 bg-black/90 shadow-[inset_0_2px_8px_rgba(0,0,0,0.9),0_1px_0_rgba(255,255,255,0.06)]'
-                    : 'border-[#1E1B16] bg-[#FAF8F5] shadow-[inset_0_4px_14px_rgba(0,0,0,0.42),0_1.5px_0_#FFFFFF] text-[#1A1815]'
+                    ? 'border-black/95 bg-black/95 shadow-[inset_0_3px_12px_rgba(0,0,0,0.95),0_1px_0_rgba(255,255,255,0.08)]'
+                    : 'border-[#1E1B16] bg-[#FAF8F5] shadow-[inset_0_4px_16px_rgba(0,0,0,0.48),0_1.5px_0_#FFFFFF] text-[#1A1815]'
                 }`}
               >
-                {/* Screen Glass Specular Sheen (Subtle diagonal glass reflection glare) */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-transparent 65% to-white/[0.04] pointer-events-none z-30" />
+                {/* Diagonal Anti-Reflective Nano-Texture Glass Glare */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-transparent 60% to-white/[0.05] pointer-events-none z-30" />
 
                 {/* Telemetry Header */}
-              <div className={`px-4 py-2.5 border-b flex flex-wrap items-center justify-between gap-2 text-xs font-mono transition-colors ${
-                theme === 'dark'
-                  ? 'bg-white/[0.03] border-white/[0.08] text-[#9a9a9a]'
-                  : 'bg-gradient-to-b from-[#F2ECE1] to-[#E2D8C7] border-b border-[#C2B6A2] text-[#2C2720] shadow-xs'
-              }`}>
-                <div className="flex items-center gap-2.5">
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-semibold text-[10px] ${
-                    theme === 'dark'
-                      ? 'bg-[#201F1C] border border-[#F5F2EB]/20 text-[#FAF8F5]'
-                      : 'bg-[#E5DFD3] border border-[#C5BDAF] text-[#1A1815]'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isUnderScanner ? 'bg-amber-400 animate-ping' : 'bg-emerald-500'}`} />
-                    {isUnderScanner ? 'OPTICAL SCANNING ACTIVE' : 'ROADWAY RADAR'}
-                  </span>
-                  <span className={`text-[11px] hidden sm:inline ${theme === 'dark' ? 'text-[#9a9a9a]' : 'text-[#736B5E]'}`}>NH-48 GANTRY #04</span>
-                </div>
+                <div className={`px-4 py-2.5 border-b flex flex-wrap items-center justify-between gap-2 text-xs font-mono transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-white/[0.04] border-white/[0.1] text-[#A69F94]'
+                    : 'bg-gradient-to-b from-[#F2ECE1] to-[#E2D8C7] border-b border-[#C2B6A2] text-[#2C2720] shadow-xs'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-semibold text-[10.5px] shadow-xs ${
+                      theme === 'dark'
+                        ? 'bg-[#22201D] border border-white/20 text-[#FAF8F5]'
+                        : 'bg-[#E5DFD3] border border-[#C5BDAF] text-[#1A1815]'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isUnderScanner ? 'bg-amber-400 animate-ping' : 'bg-emerald-400 shadow-[0_0_6px_#34d399]'}`} />
+                      <span>{isUnderScanner ? 'OPTICAL SCANNING ACTIVE' : 'ROADWAY RADAR'}</span>
+                    </span>
+                    <span className={`text-[11px] hidden sm:inline font-medium ${theme === 'dark' ? 'text-white/60' : 'text-[#736B5E]'}`}>NH-48 GANTRY #04</span>
+                  </div>
 
-                <div className="flex items-center gap-4 text-[11px]">
-                  <span className="flex items-center gap-1">
-                    <Activity className={`w-3 h-3 ${theme === 'dark' ? 'text-[#F5F2EB]' : 'text-[#1A1815]'}`} />
-                    <span className={theme === 'dark' ? 'text-white font-medium' : 'text-[#1A1815] font-semibold'}>60.2 FPS</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-[#D49E35]" />
-                    <span className="text-[#D49E35] font-medium">16.4 ms</span>
-                  </span>
-                  <span className={theme === 'dark' ? 'hidden md:inline text-white/20' : 'hidden md:inline text-[#D5CEBF]'}>|</span>
-                  <span className={theme === 'dark' ? 'text-[#9a9a9a] hidden md:inline' : 'text-[#736B5E] hidden md:inline'}>SPEED: {vehicle.speed}</span>
+                  <div className="flex items-center gap-4 text-[11px]">
+                    <span className="flex items-center gap-1.5">
+                      <Activity className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-emerald-400' : 'text-[#1A1815]'}`} />
+                      <span className={theme === 'dark' ? 'text-white font-semibold' : 'text-[#1A1815] font-semibold'}>60.2 FPS</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]" />
+                      <span className="text-amber-400 font-semibold">16.4 ms</span>
+                    </span>
+                    <span className={theme === 'dark' ? 'hidden md:inline text-white/25' : 'hidden md:inline text-[#D5CEBF]'}>|</span>
+                    <span className={`hidden md:inline font-semibold ${theme === 'dark' ? 'text-white/70' : 'text-[#5C5343]'}`}>SPEED: {vehicle.speed}</span>
+                  </div>
                 </div>
-              </div>
 
               {/* Vehicle Class Switcher Tabs */}
-              <div className={`flex border-b overflow-x-auto select-none transition-colors ${
-                theme === 'dark' ? 'border-white/[0.08] bg-black/60' : 'border-[#C2B6A2] bg-[#E8E0D2]'
+              <div className={`flex items-center border-b overflow-x-auto select-none transition-colors px-1 ${
+                theme === 'dark' ? 'border-white/[0.1] bg-[#0E0D0C]/90' : 'border-[#C2B6A2] bg-[#E8E0D2]'
               }`}>
                 {VEHICLES.map((v, i) => (
                   <button
                     key={v.id}
                     onClick={() => handleSelectVehicle(i)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-mono transition-all duration-300 border-r whitespace-nowrap cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-mono transition-all duration-300 border-r whitespace-nowrap cursor-pointer ${
                       theme === 'dark'
                         ? activeVehicleIndex === i
-                          ? 'bg-white/[0.1] text-white border-b-2 border-b-[#FAF8F5] font-bold border-r-white/[0.06] shadow-[0_0_18px_rgba(255,255,255,0.25)]'
-                          : 'text-[#9a9a9a] hover:text-white hover:bg-white/[0.08] hover:shadow-[0_0_16px_rgba(255,255,255,0.2)] border-r-white/[0.06]'
+                          ? 'bg-white/[0.14] text-white border-b-2 border-b-amber-400 font-bold border-r-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.2)]'
+                          : 'text-white/60 hover:text-white hover:bg-white/[0.06] border-r-white/[0.06]'
                         : activeVehicleIndex === i
-                          ? 'bg-[#FAF8F5] text-[#1A1815] border-b-2 border-b-[#1A1815] shadow-xs font-bold border-r-[#C2B6A2]'
-                          : 'text-[#5C5343] hover:text-[#1A1815] hover:bg-[#FAF8F5]/80 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] border-r-[#C2B6A2]'
+                          ? 'bg-[#FAF8F5] text-[#1A1815] border-b-2 border-b-amber-600 shadow-xs font-bold border-r-[#C2B6A2]'
+                          : 'text-[#5C5343] hover:text-[#1A1815] hover:bg-[#FAF8F5]/80 border-r-[#C2B6A2]'
                     }`}
                   >
+                    {activeVehicleIndex === i && (
+                      <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-amber-400 shadow-[0_0_6px_#f59e0b]' : 'bg-amber-600'}`} />
+                    )}
                     <span>{v.name}</span>
                   </button>
                 ))}
@@ -620,46 +682,52 @@ export default function HomePage() {
                 </div>
 
                 {/* =============================================================== */}
-                {/* FLOATING REAL-TIME NEURAL OCR DECODER CARD */}
+                {/* FLOATING REAL-TIME NEURAL OCR DECODER TERMINAL */}
                 {/* =============================================================== */}
                 <div
-                  className={`absolute top-3 right-3 sm:top-5 sm:right-5 w-[250px] sm:w-[280px] rounded-xl bg-black/95 border border-white/[0.22] p-3 shadow-[0_0_30px_rgba(245,242,235,0.12)] backdrop-blur-xl transition-all duration-300 z-30 ${
-                    isDetected ? 'opacity-100 translate-y-0 scale-100' : 'opacity-85 translate-y-1 scale-98'
+                  className={`absolute top-3 right-3 sm:top-5 sm:right-5 w-[260px] sm:w-[295px] rounded-2xl bg-black/90 border border-white/[0.25] p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_25px_rgba(255,255,255,0.08)] backdrop-blur-2xl transition-all duration-300 z-30 ${
+                    isDetected ? 'opacity-100 translate-y-0 scale-100 ring-1 ring-white/20' : 'opacity-85 translate-y-1 scale-98'
                   }`}
                 >
                   {/* Card Header */}
-                  <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-white/[0.1] text-[10px] font-mono">
-                    <span className="text-[#9a9a9a] flex items-center gap-1">
-                      <Cpu className="w-3 h-3 text-[#E8E2D5]" />
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/[0.12] text-[10px] font-mono">
+                    <span className="text-white/90 flex items-center gap-1.5 font-semibold">
+                      <Cpu className="w-3.5 h-3.5 text-amber-300" />
                       <span>NEURAL OCR DECODER</span>
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-700/60 text-emerald-300 font-bold text-[9px]">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold text-[9px] shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                       {isDetected ? `CONF ${vehicle.confidence}` : 'ACQUIRING...'}
                     </span>
                   </div>
 
-                  {/* Rendered Indian Plate Graphic */}
+                  {/* Rendered Indian Plate Graphic with Mounting Rivets */}
                   <div
-                    className={`relative px-3 py-2 rounded-lg border-2 border-black/80 ${vehicle.plateBg} shadow-inner flex items-center justify-between transition-all duration-200`}
+                    className={`relative px-3 py-2.5 rounded-xl border-2 border-black/90 ${vehicle.plateBg} shadow-[inset_0_2px_4px_rgba(0,0,0,0.25),0_4px_12px_rgba(0,0,0,0.5)] flex items-center justify-between transition-all duration-200`}
                   >
+                    {/* Left Metal Screw Rivet */}
+                    <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gradient-to-b from-neutral-300 to-neutral-700 border border-neutral-800 shadow-xs" />
+
                     {/* Blue IND Hologram Stripe */}
-                    <div className="flex flex-col items-center justify-center pr-2 border-r border-black/30">
-                      <div className="w-2.5 h-2.5 rounded-full bg-blue-700 flex items-center justify-center text-[6px] text-white font-bold">
+                    <div className="flex flex-col items-center justify-center pl-2 pr-2.5 border-r border-black/30">
+                      <div className="w-3 h-3 rounded-full bg-blue-700 flex items-center justify-center text-[7px] text-white font-bold shadow-xs">
                         🇮🇳
                       </div>
-                      <span className="text-[8px] font-black tracking-tighter text-blue-900">IND</span>
+                      <span className="text-[8.5px] font-black tracking-tighter text-blue-900 mt-0.5">IND</span>
                     </div>
 
                     {/* Embossed Characters */}
                     <div
-                      className={`font-mono text-base sm:text-lg font-black tracking-widest ${vehicle.plateTextColor} text-center flex-1`}
+                      className={`font-mono text-base sm:text-[19px] font-black tracking-widest ${vehicle.plateTextColor} text-center flex-1 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]`}
                     >
                       {isDetected ? vehicle.plateNumber : '•••• •• ••••'}
                     </div>
+
+                    {/* Right Metal Screw Rivet */}
+                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gradient-to-b from-neutral-300 to-neutral-700 border border-neutral-800 shadow-xs" />
                   </div>
 
                   {/* Metadata */}
-                  <div className="mt-2 pt-1.5 border-t border-white/[0.08] grid grid-cols-2 gap-1 text-[9px] font-mono">
+                  <div className="mt-2.5 pt-2 border-t border-white/[0.1] grid grid-cols-2 gap-1 text-[9.5px] font-mono">
                     <div>
                       <span className="text-[#9a9a9a]">LAYOUT:</span>{' '}
                       <span className="text-[#FAF8F5] font-semibold">{vehicle.plateType}</span>
@@ -668,25 +736,25 @@ export default function HomePage() {
                       <span className="text-[#9a9a9a]">RTO:</span>{' '}
                       <span className="text-[#FAF8F5] font-semibold">{vehicle.rtoState}</span>
                     </div>
-                    <div className="col-span-2 flex items-center justify-between mt-1 pt-1 border-t border-white/[0.06]">
-                      <span className="text-[#9a9a9a] flex items-center gap-1">
-                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
-                        Regex RTO Validated
+                    <div className="col-span-2 flex items-center justify-between mt-1 pt-1.5 border-t border-white/[0.08]">
+                      <span className="text-[#9a9a9a] flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Regex RTO Validated</span>
                       </span>
-                      <span className="text-[#E5C378] font-semibold">Tesseract + PaddleOCR</span>
+                      <span className="text-amber-300 font-semibold text-[9px] bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">PaddleOCR Engine</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Bottom Live Stream Event Ticker */}
-                <div className="absolute bottom-0 inset-x-0 bg-black/90 border-t border-white/[0.08] px-3 py-1 flex items-center justify-between text-[10px] font-mono text-[#9a9a9a] z-20">
+                <div className="absolute bottom-0 inset-x-0 bg-black/95 border-t border-white/[0.1] px-3.5 py-1.5 flex items-center justify-between text-[10.5px] font-mono text-[#9a9a9a] z-20">
                   <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                    <span className="text-[#F5F2EB] font-bold">EVENT STREAM:</span>
-                    <span className="text-white/80">{eventLogs[0]}</span>
+                    <span className="text-amber-300 font-bold">EVENT STREAM:</span>
+                    <span className="text-white/90">{eventLogs[0]}</span>
                   </div>
-                  <div className="hidden sm:flex items-center gap-1 text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span>ALPR ACTIVE</span>
+                  <div className="hidden sm:flex items-center gap-1.5 text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
+                    <span className="font-semibold">ALPR ACTIVE</span>
                   </div>
                 </div>
               </div>
@@ -694,17 +762,18 @@ export default function HomePage() {
 
               {/* Bottom Bezel Hardware Brand Engraving */}
               <div className="flex items-center justify-center pt-2 sm:pt-2.5 pointer-events-none select-none">
-                <div className="flex items-center gap-1.5 opacity-75 hover:opacity-100 transition-opacity">
-                  <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-[#D49E35]' : 'bg-[#B27D22]'}`} />
+                <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+                  <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-amber-400 shadow-[0_0_6px_#f59e0b]' : 'bg-[#B27D22]'}`} />
                   <span
-                    className={`text-[8.5px] sm:text-[9px] font-mono tracking-widest uppercase font-semibold ${
+                    className={`text-[8.5px] sm:text-[9.5px] font-mono tracking-[0.2em] uppercase font-bold ${
                       theme === 'dark'
-                        ? 'text-white/60'
-                        : 'text-[#3D3528] drop-shadow-[0_1px_0_rgba(255,255,255,0.85)] font-bold'
+                        ? 'text-white/70'
+                        : 'text-[#3D3528] drop-shadow-[0_1px_0_rgba(255,255,255,0.85)]'
                     }`}
                   >
-                    VISION-PRO WORKSTATION // NH-48 HIGHWAY TELEMETRY
+                    VISION-PRO WORKSTATION // NH-48 ALPR TELEMETRY GANTRY
                   </span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-amber-400 shadow-[0_0_6px_#f59e0b]' : 'bg-[#B27D22]'}`} />
                 </div>
               </div>
             </div>
@@ -792,6 +861,41 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+
+      {/* SECTION 02: Architectural Intelligence Pipeline */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <IntelligencePipelineSection theme={theme} />
+      </ScrollReveal>
+
+      {/* SECTION 03: Multi-Class Vehicle Intelligence */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <MultiClassVehicleSection theme={theme} />
+      </ScrollReveal>
+
+      {/* SECTION 04: AI Detection Showcase */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <AIDetectionShowcase theme={theme} />
+      </ScrollReveal>
+
+      {/* SECTION 05: Enterprise Applications */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <EnterpriseApplicationsSection theme={theme} />
+      </ScrollReveal>
+
+      {/* SECTION 06: Indian Registration Intelligence */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <IndianRegistrationSection theme={theme} />
+      </ScrollReveal>
+
+      {/* SECTION 07: Developer Integration */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <DeveloperIntegrationSection theme={theme} />
+      </ScrollReveal>
+
+      {/* SECTION 08: Final CTA / Closing Experience */}
+      <ScrollReveal direction="up" distance={36} duration={0.8}>
+        <FinalCTASection theme={theme} />
+      </ScrollReveal>
 
       {/* Full Matching Luxury Vesper-Theme Footer */}
       <Footer theme={theme} />

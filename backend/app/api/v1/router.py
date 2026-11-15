@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, auth, users, detection, history, reports, files, recognition, dashboard
+from app.api.v1.endpoints import health, auth, users, detection, history, reports, files, recognition, dashboard, analytics
 
 api_router = APIRouter()
 
@@ -12,3 +12,4 @@ api_router.include_router(detection.router)
 api_router.include_router(history.router)
 api_router.include_router(reports.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(analytics.router)

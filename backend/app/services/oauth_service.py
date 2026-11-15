@@ -11,6 +11,7 @@ from app.core.oauth import (
 from app.core.security import create_access_token, create_refresh_token
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import Token
+from app.schemas.user import UserResponse
 
 
 class OAuthService:
@@ -122,5 +123,6 @@ class OAuthService:
             access_token=access_token,
             token_type="bearer",
             refresh_token=refresh_token,
+            user=UserResponse.model_validate(user),
         )
         return token, target_redirect_url

@@ -1,12 +1,13 @@
 """Detection repository providing data access methods for DetectionJob entities."""
 
+from datetime import datetime
 from typing import List, Optional, Tuple
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.models.detection import DetectionJob, Vehicle
+from app.models.detection import DetectionJob, Plate, Vehicle
 
 
 class DetectionRepository:
@@ -48,27 +49,60 @@ class DetectionRepository:
         user_id: str,
         page: int = 1,
         page_size: int = 10,
+        search: Optional[str] = None,
         media_type: Optional[str] = None,
         status: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        vehicle_class: Optional[str] = None,
     ) -> Tuple[List[DetectionJob], int]:
         """
-        Query paginated detection history for a user with optional media_type/status filters and stable ordering.
+        Query paginated detection history for a user with optional search, filters, and stable ordering.
 
         Args:
-            user_id: Authenticated user ID.
+            user_id: Authenticated user ID boundary.
             page: 1-indexed page number.
             page_size: Number of items per page.
+            search: Optional search term matching job ID, filename/media URL, vehicle type, or plate text.
             media_type: Optional media type filter ('image', 'video').
-            status: Optional execution status filter ('COMPLETED', 'FAILED', 'PENDING').
+            status: Optional execution status filter ('COMPLETED', 'FAILED', 'PENDING', 'PROCESSING').
+            start_date: Optional start datetime boundary.
+            end_date: Optional end datetime boundary.
+            vehicle_class: Optional vehicle category filter ('car', 'truck', 'bus', 'motorbike', etc.).
 
         Returns:
             Tuple[List[DetectionJob], int]: List of jobs on current page and total count of matching jobs.
         """
         filters = [DetectionJob.user_id == user_id]
-        if media_type:
-            filters.append(DetectionJob.media_type == media_type)
-        if status:
-            filters.append(DetectionJob.status == status)
+
+        if media_type and media_type.lower() != "all":
+            filters.append(DetectionJob.media_type == media_type.lower().strip())
+        if status and status.upper() != "ALL":
+            filters.append(DetectionJob.status == status.upper().strip())
+        if start_date:
+            filters.append(DetectionJob.created_at >= start_date)
+        if end_date:
+            filters.append(DetectionJob.created_at <= end_date)
+        if vehicle_class and vehicle_class.lower() != "all":
+            clean_cls = vehicle_class.lower().strip()
+            filters.append(
+                DetectionJob.vehicles.any(
+                    Vehicle.vehicle_type.ilike(f"%{clean_cls}%")
+                )
+            )
+        if search and search.strip():
+            clean_s = search.strip()
+            search_clause = or_(
+                DetectionJob.id.ilike(f"%{clean_s}%"),
+                DetectionJob.media_url.ilike(f"%{clean_s}%"),
+                DetectionJob.vehicles.any(
+                    Vehicle.vehicle_type.ilike(f"%{clean_s}%")
+                ),
+                DetectionJob.vehicles.any(
+                    Vehicle.plate.has(Plate.plate_text.ilike(f"%{clean_s}%"))
+                ),
+            )
+            filters.append(search_clause)
 
         # Count total matching records efficiently
         count_stmt = select(func.count()).select_from(DetectionJob).where(*filters)

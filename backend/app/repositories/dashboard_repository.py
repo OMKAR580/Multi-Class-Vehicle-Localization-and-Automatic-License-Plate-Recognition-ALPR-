@@ -1,6 +1,6 @@
 """Dashboard repository providing database-level aggregation and recent activity queries."""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +38,7 @@ class DashboardRepository:
         if end_date is not None:
             job_filters.append(DetectionJob.created_at <= end_date)
 
-        # 1. Job status and media type counts via conditional aggregation in a single query
+        # 1. Job status, media type counts, and average processing time via conditional aggregation
         job_stats_stmt = (
             select(
                 func.count(DetectionJob.id).label("total_jobs"),
@@ -48,6 +48,7 @@ class DashboardRepository:
                 func.coalesce(func.sum(case((DetectionJob.status == "PROCESSING", 1), else_=0)), 0).label("processing_jobs"),
                 func.coalesce(func.sum(case((DetectionJob.media_type == "image", 1), else_=0)), 0).label("image_jobs"),
                 func.coalesce(func.sum(case((DetectionJob.media_type == "video", 1), else_=0)), 0).label("video_jobs"),
+                func.avg(case((DetectionJob.status == "COMPLETED", DetectionJob.processing_time_ms))).label("avg_latency"),
             )
             .select_from(DetectionJob)
             .where(*job_filters)
@@ -61,6 +62,11 @@ class DashboardRepository:
         processing_jobs = int(job_res.processing_jobs or 0)
         image_jobs = int(job_res.image_jobs or 0)
         video_jobs = int(job_res.video_jobs or 0)
+        avg_latency = (
+            round(float(job_res.avg_latency), 2)
+            if job_res.avg_latency is not None
+            else None
+        )
 
         # 2. Total vehicles detected for user (decoupled from plates to prevent join inflation)
         veh_stmt = (
@@ -114,8 +120,109 @@ class DashboardRepository:
             "recognized_plates": recognized_plates,
             "image_jobs": image_jobs,
             "video_jobs": video_jobs,
+            "average_processing_time_ms": avg_latency,
             "success_rate": success_rate,
         }
+
+    async def get_vehicle_class_distribution(
+        self,
+        user_id: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves breakdown of localized vehicle classes for the authenticated user.
+        """
+        job_filters = [DetectionJob.user_id == user_id]
+        if start_date is not None:
+            job_filters.append(DetectionJob.created_at >= start_date)
+        if end_date is not None:
+            job_filters.append(DetectionJob.created_at <= end_date)
+
+        stmt = (
+            select(
+                Vehicle.vehicle_type,
+                func.count(Vehicle.id).label("class_count"),
+            )
+            .select_from(Vehicle)
+            .join(DetectionJob, Vehicle.detection_job_id == DetectionJob.id)
+            .where(*job_filters)
+            .group_by(Vehicle.vehicle_type)
+            .order_by(func.count(Vehicle.id).desc())
+        )
+        rows = (await self.session.execute(stmt)).all()
+
+        total_vehicles = sum(int(r.class_count) for r in rows)
+        distribution = []
+        for r in rows:
+            count = int(r.class_count)
+            pct = round((count / total_vehicles) * 100.0, 1) if total_vehicles > 0 else 0.0
+            distribution.append({
+                "vehicle_class": str(r.vehicle_type or "other").lower(),
+                "count": count,
+                "percentage": pct,
+            })
+        return distribution
+
+    async def get_activity_timeline(
+        self,
+        user_id: str,
+        days: int = 7,
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves daily timeline buckets for the authenticated user for the last `days` days.
+        Ensures all days in the period are represented (filling empty days with 0).
+        """
+        now = datetime.now(timezone.utc)
+        date_buckets: Dict[str, Dict[str, Any]] = {}
+        for i in reversed(range(days)):
+            day_dt = now - timedelta(days=i)
+            day_str = day_dt.strftime("%Y-%m-%d")
+            day_name = day_dt.strftime("%a")
+            date_buckets[day_str] = {
+                "date": day_str,
+                "day_name": day_name,
+                "total_jobs": 0,
+                "successful_jobs": 0,
+                "failed_jobs": 0,
+                "total_vehicles": 0,
+            }
+
+        start_date = (now - timedelta(days=days - 1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        stmt = (
+            select(
+                DetectionJob.id,
+                DetectionJob.status,
+                DetectionJob.created_at,
+                func.count(Vehicle.id).label("vehicle_count"),
+            )
+            .select_from(DetectionJob)
+            .outerjoin(Vehicle, Vehicle.detection_job_id == DetectionJob.id)
+            .where(
+                DetectionJob.user_id == user_id,
+                DetectionJob.created_at >= start_date,
+            )
+            .group_by(DetectionJob.id, DetectionJob.status, DetectionJob.created_at)
+        )
+        rows = (await self.session.execute(stmt)).all()
+
+        for r in rows:
+            created_dt = r.created_at
+            if created_dt:
+                d_key = created_dt.strftime("%Y-%m-%d")
+                if d_key in date_buckets:
+                    bucket = date_buckets[d_key]
+                    bucket["total_jobs"] += 1
+                    if r.status == "COMPLETED":
+                        bucket["successful_jobs"] += 1
+                    elif r.status == "FAILED":
+                        bucket["failed_jobs"] += 1
+                    bucket["total_vehicles"] += int(r.vehicle_count or 0)
+
+        return list(date_buckets.values())
 
     async def get_recent_activity(
         self,

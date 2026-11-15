@@ -1,11 +1,13 @@
 from typing import Optional
 from pydantic import BaseModel, EmailStr, HttpUrl
+from app.schemas.user import UserResponse
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     refresh_token: str
+    user: Optional[UserResponse] = None
 
 
 class TokenPayload(BaseModel):
@@ -15,8 +17,18 @@ class TokenPayload(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str  # Accepts either email or username
     password: str
+
+
+class OAuthSyncRequest(BaseModel):
+    provider: str  # 'google' or 'github'
+    provider_user_id: str
+    email: EmailStr
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 
 class OAuthLoginRequest(BaseModel):

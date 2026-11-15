@@ -1,52 +1,88 @@
 'use client';
 
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
+import SignUpComponent from '@/components/ui/sign-up';
 
 export default function LoginPage() {
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'beige'>('dark');
+
+  useEffect(() => {
+    // Read theme synchronously before first paint to avoid flash
+    try {
+      const saved = localStorage.getItem('visionplate-theme');
+      const isBeige =
+        saved === 'beige' ||
+        saved === 'light' ||
+        document.documentElement.classList.contains('beige') ||
+        document.documentElement.classList.contains('light');
+      const activeTheme: 'dark' | 'beige' = isBeige ? 'beige' : 'dark';
+      setTheme(activeTheme);
+      if (activeTheme === 'beige') {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('beige', 'light');
+      } else {
+        document.documentElement.classList.remove('beige', 'light');
+        document.documentElement.classList.add('dark');
+      }
+    } catch {
+      setTheme('dark');
+    }
+    setMounted(true);
+
+    const syncTheme = () => {
+      try {
+        const saved = localStorage.getItem('visionplate-theme');
+        const isBeige =
+          saved === 'beige' ||
+          saved === 'light' ||
+          document.documentElement.classList.contains('beige') ||
+          document.documentElement.classList.contains('light');
+        const activeTheme: 'dark' | 'beige' = isBeige ? 'beige' : 'dark';
+        setTheme(activeTheme);
+        if (activeTheme === 'beige') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('beige', 'light');
+        } else {
+          document.documentElement.classList.remove('beige', 'light');
+          document.documentElement.classList.add('dark');
+        }
+      } catch {
+        setTheme('dark');
+      }
+    };
+
+    window.addEventListener('storage', syncTheme);
+    return () => window.removeEventListener('storage', syncTheme);
+  }, []);
+
+  const toggleTheme = () => {
+    const next: 'dark' | 'beige' = theme === 'dark' ? 'beige' : 'dark';
+    setTheme(next);
+    try {
+      localStorage.setItem('visionplate-theme', next);
+    } catch {}
+    if (next === 'beige') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('beige', 'light');
+    } else {
+      document.documentElement.classList.remove('beige', 'light');
+      document.documentElement.classList.add('dark');
+    }
+    window.dispatchEvent(new Event('storage'));
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4">
-      <div className="max-w-md w-full p-8 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl">
-        <div className="text-center mb-8">
-          <span className="inline-block bg-sky-500 text-slate-950 font-black text-xs px-3 py-1 rounded uppercase tracking-wider mb-2">
-            ALPR Platform
-          </span>
-          <h1 className="text-2xl font-bold text-white">Sign In to Dashboard</h1>
-          <p className="text-xs text-slate-400 mt-1">Authenticate to access AI Detection, History, & Reports</p>
-        </div>
-
-        <div className="space-y-4">
-          <button
-            onClick={() => alert('Google OAuth sign-in flow placeholder. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env')}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium border border-slate-700 transition"
-          >
-            <span>Continue with Google</span>
-          </button>
-          <button
-            onClick={() => alert('GitHub OAuth sign-in flow placeholder. Set NEXT_PUBLIC_GITHUB_CLIENT_ID in .env')}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium border border-slate-700 transition"
-          >
-            <span>Continue with GitHub</span>
-          </button>
-        </div>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
-          <div className="relative flex justify-center text-xs uppercase"><span className="bg-slate-900 px-2 text-slate-500">Dev Sandbox</span></div>
-        </div>
-
-        <Link
-          href="/app/dashboard"
-          className="block w-full text-center py-3 px-4 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold transition"
-        >
-          Bypass Login (Dev Mode)
-        </Link>
-
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-xs text-slate-400 hover:text-sky-400">
-            ← Back to Public Website
-          </Link>
-        </div>
-      </div>
+    <div suppressHydrationWarning className="min-h-screen w-screen">
+      {mounted && (
+        <SignUpComponent
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          brandName="VisionPlate AI"
+          defaultMode="signin"
+          onSuccessRedirect="/app/dashboard"
+        />
+      )}
     </div>
   );
 }

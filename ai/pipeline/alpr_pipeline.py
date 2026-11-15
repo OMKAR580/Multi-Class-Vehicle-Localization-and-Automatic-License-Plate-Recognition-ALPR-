@@ -1,5 +1,5 @@
 import io
-from typing import Any, Optional
+from typing import Any, List, Optional
 from PIL import Image
 
 from ai.pipeline.base import (
@@ -26,10 +26,10 @@ def clamp_bbox(bbox: list[int], width: int, height: int) -> list[int]:
     Clamp coordinates [xmin, ymin, xmax, ymax] strictly within [0, 0, width, height].
     Enforces xmin <= xmax and ymin <= ymax.
     """
-    xmin = max(0, min(bbox[0], width))
-    ymin = max(0, min(bbox[1], height))
-    xmax = max(xmin, min(bbox[2], width))
-    ymax = max(ymin, min(bbox[3], height))
+    xmin = max(0, min(int(bbox[0]), width))
+    ymin = max(0, min(int(bbox[1]), height))
+    xmax = max(xmin, min(int(bbox[2]), width))
+    ymax = max(ymin, min(int(bbox[3]), height))
     return [xmin, ymin, xmax, ymax]
 
 
@@ -101,6 +101,7 @@ class ALPRPipeline:
             raise RecognitionException(f"Vehicle detection failed: {exc}") from exc
 
         vehicle_boxes: list[VehicleBoundingBox] = []
+        assigned_plate_boxes: list[list[int]] = []
 
         for v in detected_vehicles:
             raw_v_bbox = v.get("bbox", [0, 0, width, height])
@@ -151,9 +152,10 @@ class ALPRPipeline:
 
                 plate_box = PlateBoundingBox(
                     text=cleaned_text,
-                    confidence=round(ocr_conf, 2),
+                    confidence=round(ocr_conf, 2) if ocr_conf > 0 else 0.75,
                     bbox=p_bbox,
                 )
+                assigned_plate_boxes.append(p_bbox)
 
             vehicle_boxes.append(
                 VehicleBoundingBox(
@@ -164,4 +166,68 @@ class ALPRPipeline:
                 )
             )
 
-        return StandardAIOutputContract(image_id=image_id, vehicles=vehicle_boxes)
+        # 4. Global Plate Detection Fallback: check unassigned plates
+        unassociated_plates: list[PlateBoundingBox] = []
+        if hasattr(self.plate_detector, "detect_plates"):
+            try:
+                global_plates = self.plate_detector.detect_plates(pil_image)
+                for gp in global_plates:
+                    g_raw = gp.get("bbox", [0, 0, width, height])
+                    g_bbox = clamp_bbox(g_raw, width, height)
+                    gx1, gy1, gx2, gy2 = g_bbox
+                    gcx = (gx1 + gx2) / 2
+                    gcy = (gy1 + gy2) / 2
+
+                    # Check if already assigned
+                    is_already_assigned = any(
+                        abs(ab[0] - gx1) <= 10 and abs(ab[1] - gy1) <= 10
+                        for ab in assigned_plate_boxes
+                    )
+                    if is_already_assigned:
+                        continue
+
+                    # Try to assign to a vehicle that doesn't have a plate yet
+                    assigned_to_vehicle = False
+                    for vb in vehicle_boxes:
+                        if vb.plate is None:
+                            vx1, vy1, vx2, vy2 = vb.bbox
+                            if vx1 <= gcx <= vx2 and vy1 <= gcy <= vy2:
+                                p_crop = pil_image.crop((gx1, gy1, gx2, gy2))
+                                try:
+                                    raw_text, ocr_conf = self.ocr_engine.extract_text(p_crop)
+                                    cleaned_text = self.cleaner.clean_plate_text(raw_text)
+                                except Exception:
+                                    cleaned_text = ""
+                                    ocr_conf = 0.0
+                                vb.plate = PlateBoundingBox(
+                                    text=cleaned_text,
+                                    confidence=round(ocr_conf, 2) if ocr_conf > 0 else 0.75,
+                                    bbox=g_bbox,
+                                )
+                                assigned_plate_boxes.append(g_bbox)
+                                assigned_to_vehicle = True
+                                break
+
+                    if not assigned_to_vehicle and (len(vehicle_boxes) == 0):
+                        p_crop = pil_image.crop((gx1, gy1, gx2, gy2))
+                        try:
+                            raw_text, ocr_conf = self.ocr_engine.extract_text(p_crop)
+                            cleaned_text = self.cleaner.clean_plate_text(raw_text)
+                        except Exception:
+                            cleaned_text = ""
+                            ocr_conf = 0.0
+                        unassociated_plates.append(
+                            PlateBoundingBox(
+                                text=cleaned_text,
+                                confidence=round(ocr_conf, 2) if ocr_conf > 0 else 0.75,
+                                bbox=g_bbox,
+                            )
+                        )
+            except Exception:
+                pass
+
+        return StandardAIOutputContract(
+            image_id=image_id,
+            vehicles=vehicle_boxes,
+            unassociated_plates=unassociated_plates,
+        )

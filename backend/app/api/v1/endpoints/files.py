@@ -1,11 +1,13 @@
 """File upload API endpoints for VisionPlate AI."""
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.exceptions import ResourceNotFoundException, UnauthorizedException
 from app.models.user import User
+from app.repositories.file_repository import FileRepository
 from app.schemas.file import FileUploadResponse
 from app.services.file_service import FileService
 from app.services.storage_service import BaseStorageService, get_storage_service
@@ -62,3 +64,30 @@ async def upload_file(
     """Handle secure authenticated multipart file upload."""
     service = FileService(db=db, storage=storage)
     return await service.upload_file(file=file, current_user=current_user)
+
+
+@router.get(
+    "/{file_id}/content",
+    summary="Download or stream authenticated uploaded file content",
+    responses={
+        200: {"description": "Raw media asset stream"},
+        401: {"description": "Unauthorized access"},
+        404: {"description": "File not found"},
+    },
+)
+async def get_file_content(
+    file_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    storage: BaseStorageService = Depends(get_storage_service),
+) -> Response:
+    """Retrieve raw media asset bytes for an authorized uploaded file."""
+    repo = FileRepository(db)
+    file_meta = await repo.get_by_id(file_id)
+    if not file_meta:
+        raise ResourceNotFoundException("File asset", file_id)
+    if file_meta.uploaded_by_user_id != current_user.id:
+        raise UnauthorizedException("Access denied: You do not own this file.")
+
+    file_bytes = await storage.read_bytes(file_meta.file_path)
+    return Response(content=file_bytes, media_type=file_meta.mime_type)

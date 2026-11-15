@@ -40,6 +40,21 @@ ai/models/*.onnx
 ai/models/*.engine
 ai/models/*.safetensors
 
+# Raw Datasets, Archives & Weight Dumps
+annotations-*/
+config-*/
+manifests-*/
+pretrained-*/
+uvh26_*/
+uvh26_*
+vehicle_detector/
+assits/
+storage/
+backend/storage/
+backend/crop*.png
+scratch/
+frontend/tsconfig.tsbuildinfo
+
 # Node / Next.js / Frontend
 frontend/node_modules/
 frontend/.next/

@@ -20,11 +20,13 @@ class RecognitionResponse(BaseModel):
 
     job_id: str = Field(..., description="Unique detection job identifier (UUID).")
     file_id: str = Field(..., description="Referenced file upload identifier.")
+    filename: Optional[str] = Field(None, description="Original or safe media filename.")
     status: str = Field(..., description="Job execution status ('COMPLETED', 'FAILED').")
     processing_time_ms: float = Field(..., description="Inference runtime in milliseconds.")
     image_width: int = Field(..., description="Original image width in pixels.")
     image_height: int = Field(..., description="Original image height in pixels.")
     vehicles: List[VehicleResult] = Field(default_factory=list, description="List of detected vehicles and license plates.")
+    annotated_image: Optional[str] = Field(None, description="Base64-encoded annotated JPEG image with bounding boxes.")
     error_message: Optional[str] = Field(None, description="Detailed error description if execution failed.")
     created_at: datetime = Field(..., description="Detection job creation timestamp.")
 
@@ -52,6 +54,7 @@ class VideoRecognitionResponse(BaseModel):
 
     job_id: str = Field(..., description="Unique detection job identifier (UUID).")
     file_id: str = Field(..., description="Referenced file upload identifier.")
+    filename: Optional[str] = Field(None, description="Original or safe media filename.")
     status: str = Field(..., description="Job execution status ('COMPLETED', 'FAILED').")
     processing_time_ms: float = Field(..., description="Total processing runtime in milliseconds.")
     video_fps: float = Field(..., description="Source video frame rate (FPS).")
@@ -73,11 +76,14 @@ class RecognitionHistoryItem(BaseModel):
     job_id: str = Field(..., description="Unique detection job identifier (UUID).")
     media_type: str = Field(..., description="Media asset type ('image', 'video').")
     media_url: str = Field(..., description="Storage key or path of the processed media asset.")
+    filename: Optional[str] = Field(None, description="Original or safe media filename.")
     status: str = Field(..., description="Job execution status ('COMPLETED', 'FAILED', 'PENDING').")
     processing_time_ms: Optional[float] = Field(None, description="Inference runtime in milliseconds.")
     error_message: Optional[str] = Field(None, description="Error message if execution failed.")
     vehicle_count: int = Field(0, description="Total number of vehicles detected across media asset.")
     plate_count: int = Field(0, description="Total number of license plates detected across media asset.")
+    plates: List[str] = Field(default_factory=list, description="List of recognized plate numbers for quick preview.")
+    vehicle_types: List[str] = Field(default_factory=list, description="Unique vehicle types localized in this job.")
     created_at: datetime = Field(..., description="Job creation timestamp.")
 
 

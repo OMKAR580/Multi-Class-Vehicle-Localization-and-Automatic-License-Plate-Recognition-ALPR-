@@ -43,12 +43,75 @@ class ResourceNotFoundException(ALPRPlatformException):
         )
 
 
+class AccountNotFoundException(ALPRPlatformException):
+    def __init__(self, message: str = "No account found with this email. Please create an account."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="ACCOUNT_NOT_FOUND",
+        )
+
+
+class AccountDisabledException(ALPRPlatformException):
+    def __init__(self, message: str = "Account is deactivated or disabled. Please contact administrator."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="ACCOUNT_DISABLED",
+        )
+
+
+class EmailAlreadyExistsException(ALPRPlatformException):
+    def __init__(self, message: str = "An account with this email already exists."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_409_CONFLICT,
+            code="EMAIL_ALREADY_EXISTS",
+        )
+
+
+class UsernameAlreadyExistsException(ALPRPlatformException):
+    def __init__(self, message: str = "An account with this username already exists."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_409_CONFLICT,
+            code="USERNAME_ALREADY_EXISTS",
+        )
+
+
+class InvalidEmailException(ALPRPlatformException):
+    def __init__(self, message: str = "Please enter a valid email address."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="INVALID_EMAIL",
+        )
+
+
+class WeakPasswordException(ALPRPlatformException):
+    def __init__(self, message: str = "Password must be at least 6 characters long."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            code="WEAK_PASSWORD",
+        )
+
+
+class DatabaseUnavailableException(ALPRPlatformException):
+    def __init__(self, message: str = "Database service is temporarily unavailable. Please try again later."):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="DATABASE_UNAVAILABLE",
+        )
+
+
 class InvalidCredentialsException(ALPRPlatformException):
-    def __init__(self, message: str = "Invalid authentication credentials."):
+    def __init__(self, message: str = "Incorrect password. Please try again."):
         super().__init__(
             message=message,
             status_code=status.HTTP_401_UNAUTHORIZED,
-            code="UNAUTHORIZED",
+            code="INVALID_CREDENTIALS",
         )
 
 

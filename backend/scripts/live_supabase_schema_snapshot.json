@@ -1,0 +1,1298 @@
+{
+  "identity": {
+    "version": "PostgreSQL 17.11 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "database": "postgres",
+    "schema": "public",
+    "user": "postgres",
+    "search_path": "\"\\$user\", public, extensions"
+  },
+  "tables": [
+    "audit_logs",
+    "detections",
+    "files",
+    "oauth_accounts",
+    "plates",
+    "reports",
+    "user_identities",
+    "users",
+    "vehicles"
+  ],
+  "table_existence": {
+    "users": true,
+    "oauth_accounts": true,
+    "user_identities": true,
+    "detections": true,
+    "vehicles": true,
+    "plates": true,
+    "files": true,
+    "reports": true,
+    "audit_logs": true,
+    "report_folders": false,
+    "alembic_version": false,
+    "_alembic_0004_state": false
+  },
+  "row_counts": {
+    "audit_logs": 0,
+    "detections": 5,
+    "files": 5,
+    "oauth_accounts": 1,
+    "plates": 6,
+    "reports": 0,
+    "user_identities": 3,
+    "users": 3,
+    "vehicles": 24
+  },
+  "alembic_version": null,
+  "_alembic_0004_state": null,
+  "table_details": {
+    "users": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "username",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 100,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "email",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "hashed_password",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "full_name",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "is_active",
+          "data_type": "boolean",
+          "udt_name": "bool",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "true"
+        },
+        {
+          "column_name": "email_verified",
+          "data_type": "boolean",
+          "udt_name": "bool",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false"
+        },
+        {
+          "column_name": "is_superuser",
+          "data_type": "boolean",
+          "udt_name": "bool",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "false"
+        },
+        {
+          "column_name": "role",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'operator'::character varying"
+        },
+        {
+          "column_name": "avatar_url",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 512,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [],
+      "unique_constraints": [
+        {
+          "constraint_name": "users_email_key",
+          "column_name": "email"
+        },
+        {
+          "constraint_name": "users_username_key",
+          "column_name": "username"
+        }
+      ],
+      "indexes": [
+        {
+          "indexname": "users_pkey",
+          "indexdef": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+        },
+        {
+          "indexname": "users_username_key",
+          "indexdef": "CREATE UNIQUE INDEX users_username_key ON public.users USING btree (username)"
+        },
+        {
+          "indexname": "users_email_key",
+          "indexdef": "CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email)"
+        },
+        {
+          "indexname": "ix_users_email",
+          "indexdef": "CREATE INDEX ix_users_email ON public.users USING btree (email)"
+        },
+        {
+          "indexname": "ix_users_username",
+          "indexdef": "CREATE INDEX ix_users_username ON public.users USING btree (username)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17645_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_3_not_null",
+          "check_clause": "email IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_6_not_null",
+          "check_clause": "is_active IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_7_not_null",
+          "check_clause": "email_verified IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_8_not_null",
+          "check_clause": "is_superuser IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_9_not_null",
+          "check_clause": "role IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_11_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17645_12_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "oauth_accounts": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "provider",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "provider_user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "access_token",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 1024,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "refresh_token",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 1024,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "oauth_accounts_user_id_fkey",
+          "column_name": "user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "CASCADE",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [
+        {
+          "constraint_name": "uq_oauth_provider_user_id",
+          "column_name": "provider"
+        },
+        {
+          "constraint_name": "uq_oauth_provider_user_id",
+          "column_name": "provider_user_id"
+        },
+        {
+          "constraint_name": "uq_user_provider",
+          "column_name": "user_id"
+        },
+        {
+          "constraint_name": "uq_user_provider",
+          "column_name": "provider"
+        }
+      ],
+      "indexes": [
+        {
+          "indexname": "oauth_accounts_pkey",
+          "indexdef": "CREATE UNIQUE INDEX oauth_accounts_pkey ON public.oauth_accounts USING btree (id)"
+        },
+        {
+          "indexname": "uq_oauth_provider_user_id",
+          "indexdef": "CREATE UNIQUE INDEX uq_oauth_provider_user_id ON public.oauth_accounts USING btree (provider, provider_user_id)"
+        },
+        {
+          "indexname": "uq_user_provider",
+          "indexdef": "CREATE UNIQUE INDEX uq_user_provider ON public.oauth_accounts USING btree (user_id, provider)"
+        },
+        {
+          "indexname": "ix_oauth_accounts_provider_user_id",
+          "indexdef": "CREATE INDEX ix_oauth_accounts_provider_user_id ON public.oauth_accounts USING btree (provider_user_id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17682_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17682_2_not_null",
+          "check_clause": "user_id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17682_3_not_null",
+          "check_clause": "provider IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17682_4_not_null",
+          "check_clause": "provider_user_id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17682_7_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17682_8_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "user_identities": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "provider",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "provider_user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "provider_email",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "user_identities_user_id_fkey",
+          "column_name": "user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "CASCADE",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [
+        {
+          "constraint_name": "uq_user_identity_provider_user_id",
+          "column_name": "provider"
+        },
+        {
+          "constraint_name": "uq_user_identity_provider_user_id",
+          "column_name": "provider_user_id"
+        }
+      ],
+      "indexes": [
+        {
+          "indexname": "user_identities_pkey",
+          "indexdef": "CREATE UNIQUE INDEX user_identities_pkey ON public.user_identities USING btree (id)"
+        },
+        {
+          "indexname": "uq_user_identity_provider_user_id",
+          "indexdef": "CREATE UNIQUE INDEX uq_user_identity_provider_user_id ON public.user_identities USING btree (provider, provider_user_id)"
+        },
+        {
+          "indexname": "ix_user_identities_provider_user_id",
+          "indexdef": "CREATE INDEX ix_user_identities_provider_user_id ON public.user_identities USING btree (provider_user_id)"
+        },
+        {
+          "indexname": "ix_user_identities_user_id",
+          "indexdef": "CREATE INDEX ix_user_identities_user_id ON public.user_identities USING btree (user_id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17664_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17664_2_not_null",
+          "check_clause": "user_id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17664_3_not_null",
+          "check_clause": "provider IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17664_4_not_null",
+          "check_clause": "provider_user_id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17664_6_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17664_7_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "detections": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "status",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'PENDING'::character varying"
+        },
+        {
+          "column_name": "media_type",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'image'::character varying"
+        },
+        {
+          "column_name": "media_url",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 512,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "processing_time_ms",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "error_message",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 1024,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "raw_result",
+          "data_type": "jsonb",
+          "udt_name": "jsonb",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "detections_user_id_fkey",
+          "column_name": "user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "SET NULL",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        {
+          "indexname": "detections_pkey",
+          "indexdef": "CREATE UNIQUE INDEX detections_pkey ON public.detections USING btree (id)"
+        },
+        {
+          "indexname": "ix_detections_status",
+          "indexdef": "CREATE INDEX ix_detections_status ON public.detections USING btree (status)"
+        },
+        {
+          "indexname": "ix_detections_user_id",
+          "indexdef": "CREATE INDEX ix_detections_user_id ON public.detections USING btree (user_id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17715_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17715_3_not_null",
+          "check_clause": "status IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17715_4_not_null",
+          "check_clause": "media_type IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17715_5_not_null",
+          "check_clause": "media_url IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17715_9_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17715_10_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "vehicles": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "detection_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "vehicle_type",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "confidence",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_x1",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_y1",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_x2",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_y2",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "detection_job_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox",
+          "data_type": "jsonb",
+          "udt_name": "jsonb",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "vehicles_detection_id_fkey",
+          "column_name": "detection_id",
+          "foreign_table_name": "detections",
+          "foreign_column_name": "id",
+          "delete_rule": "CASCADE",
+          "update_rule": "NO ACTION"
+        },
+        {
+          "constraint_name": "vehicles_detection_job_id_fkey",
+          "column_name": "detection_job_id",
+          "foreign_table_name": "detections",
+          "foreign_column_name": "id",
+          "delete_rule": "CASCADE",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        {
+          "indexname": "vehicles_pkey",
+          "indexdef": "CREATE UNIQUE INDEX vehicles_pkey ON public.vehicles USING btree (id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17733_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17733_3_not_null",
+          "check_clause": "vehicle_type IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17733_4_not_null",
+          "check_clause": "confidence IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17733_9_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17733_10_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "plates": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "vehicle_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "plate_text",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "confidence",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_x1",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_y1",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_x2",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "bbox_y2",
+          "data_type": "double precision",
+          "udt_name": "float8",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "bbox",
+          "data_type": "jsonb",
+          "udt_name": "jsonb",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "crop_url",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 512,
+          "is_nullable": "YES",
+          "column_default": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "plates_vehicle_id_fkey",
+          "column_name": "vehicle_id",
+          "foreign_table_name": "vehicles",
+          "foreign_column_name": "id",
+          "delete_rule": "CASCADE",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        {
+          "indexname": "plates_pkey",
+          "indexdef": "CREATE UNIQUE INDEX plates_pkey ON public.plates USING btree (id)"
+        },
+        {
+          "indexname": "ix_plates_plate_text",
+          "indexdef": "CREATE INDEX ix_plates_plate_text ON public.plates USING btree (plate_text)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17745_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17745_2_not_null",
+          "check_clause": "vehicle_id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17745_3_not_null",
+          "check_clause": "plate_text IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17745_4_not_null",
+          "check_clause": "confidence IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17745_9_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17745_10_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "files": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "original_filename",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "stored_path",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 512,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "file_size_bytes",
+          "data_type": "bigint",
+          "udt_name": "int8",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "mime_type",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 100,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "filename",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "file_path",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 512,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "uploaded_by_user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "files_uploaded_by_user_id_fkey",
+          "column_name": "uploaded_by_user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "SET NULL",
+          "update_rule": "NO ACTION"
+        },
+        {
+          "constraint_name": "files_user_id_fkey",
+          "column_name": "user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "SET NULL",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        {
+          "indexname": "files_pkey",
+          "indexdef": "CREATE UNIQUE INDEX files_pkey ON public.files USING btree (id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17701_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17701_5_not_null",
+          "check_clause": "file_size_bytes IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17701_6_not_null",
+          "check_clause": "mime_type IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17701_7_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17701_8_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "reports": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "title",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 255,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "report_type",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 50,
+          "is_nullable": "NO",
+          "column_default": "'summary'::character varying"
+        },
+        {
+          "column_name": "report_data",
+          "data_type": "jsonb",
+          "udt_name": "jsonb",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "file_url",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 512,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "reports_user_id_fkey",
+          "column_name": "user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "SET NULL",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        {
+          "indexname": "reports_pkey",
+          "indexdef": "CREATE UNIQUE INDEX reports_pkey ON public.reports USING btree (id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17758_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17758_3_not_null",
+          "check_clause": "title IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17758_4_not_null",
+          "check_clause": "report_type IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17758_7_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17758_8_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    },
+    "audit_logs": {
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 36,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "action",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 100,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "resource_type",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 100,
+          "is_nullable": "NO",
+          "column_default": null
+        },
+        {
+          "column_name": "resource_id",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 100,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "details",
+          "data_type": "jsonb",
+          "udt_name": "jsonb",
+          "character_maximum_length": null,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "ip_address",
+          "data_type": "character varying",
+          "udt_name": "varchar",
+          "character_maximum_length": 45,
+          "is_nullable": "YES",
+          "column_default": null
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "udt_name": "timestamptz",
+          "character_maximum_length": null,
+          "is_nullable": "NO",
+          "column_default": "now()"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "foreign_keys": [
+        {
+          "constraint_name": "audit_logs_user_id_fkey",
+          "column_name": "user_id",
+          "foreign_table_name": "users",
+          "foreign_column_name": "id",
+          "delete_rule": "SET NULL",
+          "update_rule": "NO ACTION"
+        }
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        {
+          "indexname": "audit_logs_pkey",
+          "indexdef": "CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id)"
+        }
+      ],
+      "check_constraints": [
+        {
+          "constraint_name": "2200_17773_1_not_null",
+          "check_clause": "id IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17773_3_not_null",
+          "check_clause": "action IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17773_4_not_null",
+          "check_clause": "resource_type IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17773_8_not_null",
+          "check_clause": "created_at IS NOT NULL"
+        },
+        {
+          "constraint_name": "2200_17773_9_not_null",
+          "check_clause": "updated_at IS NOT NULL"
+        }
+      ]
+    }
+  },
+  "reports_orphaned_user_records": 0
+}

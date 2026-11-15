@@ -356,13 +356,13 @@ export const PillBase: React.FC<AdaptiveNavPillProps> = ({
                         -1px 1px 0 rgba(0, 0, 0, 0.10)
                       `,
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                     if (!isActive) {
                       e.currentTarget.style.color = '#222222';
                       e.currentTarget.style.transform = 'translateY(-0.5px)';
                     }
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
                     if (!isActive) {
                       e.currentTarget.style.color = '#555555';
                       e.currentTarget.style.transform = 'translateY(0)';

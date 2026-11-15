@@ -8,10 +8,51 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
-from app.schemas.dashboard import DashboardActivityResponse, DashboardStatsResponse
+from app.schemas.dashboard import (
+    DashboardActivityResponse,
+    DashboardOverviewResponse,
+    DashboardStatsResponse,
+)
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+@router.get(
+    "/overview",
+    response_model=DashboardOverviewResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Consolidated Dashboard Operational Overview",
+    description="""
+Fetch aggregated KPI metrics, activity timeline, vehicle class breakdown, and recent recognition jobs for the authenticated user.
+
+### Requirements & Behavior:
+- **Authentication**: Requires a valid JWT Bearer token in the `Authorization` header (`Authorization: Bearer <token>`).
+- **User Scoping**: Metrics exclusively aggregate data owned by the authenticated user.
+- **Payload**:
+  - `summary`: Total jobs, completed/failed counts, total vehicles, total plates, recognized plates, image/video breakdown, success rate, and average latency.
+  - `activity_timeline`: Daily breakdowns for the requested number of days (default 7).
+  - `vehicle_distribution`: Grouped counts and percentages across recognized vehicle classes (car, truck, bus, motorbike, etc.).
+  - `recent_jobs`: Most recent recognition jobs with status, vehicle count, and duration.
+    """,
+    responses={
+        200: {"description": "Dashboard operational overview retrieved successfully."},
+        401: {"description": "Authentication credentials missing or invalid."},
+    },
+)
+async def get_dashboard_overview(
+    days: int = Query(default=7, ge=1, le=90, description="Number of days for activity timeline."),
+    recent_limit: int = Query(default=5, ge=1, le=50, description="Max number of recent jobs to return."),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DashboardOverviewResponse:
+    """Retrieve authenticated user's operational overview."""
+    service = DashboardService(db=db)
+    return await service.get_dashboard_overview(
+        current_user=current_user,
+        days=days,
+        recent_limit=recent_limit,
+    )
 
 
 @router.get(

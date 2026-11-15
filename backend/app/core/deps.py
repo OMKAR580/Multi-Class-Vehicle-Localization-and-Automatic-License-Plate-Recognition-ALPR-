@@ -55,3 +55,16 @@ async def get_current_user(
         raise UnauthorizedException("User account is inactive")
 
     return user
+
+
+def get_alpr_pipeline(request: Request):
+    """
+    Dependency that returns the shared ALPRPipeline instance from app.state,
+    or lazily initializes it if missing.
+    """
+    if hasattr(request.app.state, "alpr_pipeline") and request.app.state.alpr_pipeline is not None:
+        return request.app.state.alpr_pipeline
+    from ai.pipeline.alpr_pipeline import ALPRPipeline
+    pipeline = ALPRPipeline()
+    request.app.state.alpr_pipeline = pipeline
+    return pipeline

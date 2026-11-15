@@ -21,7 +21,7 @@ class PlateDetector(BasePlateDetector):
     def __init__(
         self,
         model_path: Optional[str] = None,
-        min_confidence: float = 0.40,
+        min_confidence: float = 0.35,
     ):
         raw_path = str(model_path or DEFAULT_MODEL_PATH)
         if not os.path.exists(raw_path) and not os.path.isabs(raw_path):
@@ -137,3 +137,20 @@ class PlateDetector(BasePlateDetector):
         if not all_plates:
             return None
         return all_plates[0]["bbox"]
+
+    def detect_plate_with_conf(self, vehicle_crop: Any) -> tuple[Optional[List[int]], float]:
+        """
+        Detect top license plate bounding box and confidence score in a vehicle crop.
+        Returns ([xmin, ymin, xmax, ymax], confidence) or (None, 0.0).
+        """
+        all_plates = self.detect_all_plates(vehicle_crop)
+        if not all_plates:
+            return None, 0.0
+        return all_plates[0]["bbox"], round(all_plates[0]["confidence"], 4)
+
+    def detect_plates(self, image: Any) -> List[Dict[str, Any]]:
+        """
+        Detect all license plates across an image for global fallback localization.
+        Returns list of dicts: [{"bbox": [xmin, ymin, xmax, ymax], "confidence": float, ...}]
+        """
+        return self.detect_all_plates(image)

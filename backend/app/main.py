@@ -1,3 +1,13 @@
+import sys
+from pathlib import Path
+
+# Ensure project root is present in sys.path before loading sub-routers & AI modules
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent.parent)
+_BACKEND_DIR = str(Path(__file__).resolve().parent.parent)
+for _p in [_PROJECT_ROOT, _BACKEND_DIR]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -24,6 +34,12 @@ async def lifespan(app: FastAPI):
         settings.APP_VERSION,
         settings.ENVIRONMENT,
     )
+    try:
+        from ai.pipeline.alpr_pipeline import ALPRPipeline
+        app.state.alpr_pipeline = ALPRPipeline()
+        logger.info("ALPRPipeline initialized in application state.")
+    except Exception as exc:
+        logger.warning("ALPRPipeline startup initialization deferred: %s", exc)
     yield
     logger.info("Shutting down API server...")
 
@@ -40,9 +56,15 @@ app = FastAPI(
 
 # CORS Configuration
 origins = settings.CORS_ORIGINS
+allow_origin_regex = (
+    r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$"
+    if settings.ENVIRONMENT == "development"
+    else None
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials="*" not in origins,
     allow_methods=["*"],
     allow_headers=["*"],

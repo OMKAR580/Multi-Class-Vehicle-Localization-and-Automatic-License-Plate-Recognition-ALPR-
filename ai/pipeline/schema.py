@@ -15,3 +15,5 @@ class VehicleBoundingBox(BaseModel):
 class StandardAIOutputContract(BaseModel):
     image_id: str = Field(..., description="Unique image identifier or file name")
     vehicles: List[VehicleBoundingBox] = Field(default_factory=list, description="List of detected vehicles")
+    unassociated_plates: List[PlateBoundingBox] = Field(default_factory=list, description="Plates not linked to a detected vehicle")
+    annotated_image: Optional[str] = Field(None, description="Base64 encoded annotated image")
