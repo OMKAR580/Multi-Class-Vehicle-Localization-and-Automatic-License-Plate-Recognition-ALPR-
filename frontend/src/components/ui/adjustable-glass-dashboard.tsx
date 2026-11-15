@@ -981,7 +981,7 @@ export default function GlassWorkspace({
             aria-label="Notifications"
           >
             <div>
-              <h2>You're all caught up.</h2>
+              <h2>You&apos;re all caught up.</h2>
               <button
                 type="button"
                 aria-label="Close notifications"

@@ -339,7 +339,7 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
                   <span className="text-xs font-mono font-bold text-amber-500 dark:text-amber-400">
                     SEQUENCE {inspectedClass.sequence}
                   </span>
-                  <span className="text-xs font-mono text-zinc-400">//</span>
+                  <span className="text-xs font-mono text-zinc-400">{'//'}</span>
                   <span className="text-xs font-mono text-emerald-500 dark:text-emerald-400 font-semibold">
                     CLASS ID: {inspectedClass.classId}
                   </span>
@@ -383,7 +383,7 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
                 <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-emerald-400 shadow-[0_0_8px_#10b981]" />
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-emerald-400 shadow-[0_0_8px_#10b981]" />
                 <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 border border-emerald-500/50 text-[10px] font-mono text-emerald-300 font-bold">
-                  ● {(inspectedClass.classId || 'DETECTED').toUpperCase()} // {inspectedClass.confidence}
+                  ● {(inspectedClass.classId || 'DETECTED').toUpperCase()} {'//'} {inspectedClass.confidence}
                 </div>
               </div>
 

@@ -300,7 +300,7 @@ export default function EnterpriseApplicationsSection({
                     <span>{selectedApp.badge}</span>
                   </div>
                   <div className="px-2.5 py-1 rounded bg-black/70 backdrop-blur-md border border-white/10 text-zinc-300">
-                    {selectedApp.index} // ENTERPRISE PROFILE
+                    {selectedApp.index} {'//'} ENTERPRISE PROFILE
                   </div>
                 </div>
 

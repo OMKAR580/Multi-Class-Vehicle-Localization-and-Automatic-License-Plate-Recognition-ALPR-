@@ -45,6 +45,17 @@ REAL_PLATE_IMAGE = "vehicle_detector/uvh26_v2/raw_selected/val/109489.png"
 VEHICLE_CHECKPOINT = "ai/models/best.pt"
 PLATE_CHECKPOINT = "ai/models/yolov8_plate.pt"
 
+try:
+    import ultralytics  # noqa: F401
+    HAS_ULTRALYTICS = True
+except ImportError:
+    HAS_ULTRALYTICS = False
+
+pytestmark = pytest.mark.skipif(
+    not HAS_ULTRALYTICS or not os.path.exists(VEHICLE_CHECKPOINT),
+    reason="Ultralytics or local model weights not available in lightweight CI environment"
+)
+
 
 @pytest_asyncio.fixture
 async def db_session():

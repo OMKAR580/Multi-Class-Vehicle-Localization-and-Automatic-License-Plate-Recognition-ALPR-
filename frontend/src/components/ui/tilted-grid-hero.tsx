@@ -351,7 +351,7 @@ export function TiltedGridHero({
                           </span>
                           {img.sequence && (
                             <span className="text-[10px] font-mono text-emerald-500/90 font-medium">
-                              //{img.sequence}
+                              {'//'}{img.sequence}
                             </span>
                           )}
                         </div>
