@@ -126,16 +126,14 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
   return (
     <section
       id="vehicle-intelligence"
-      className={`relative pt-10 sm:pt-14 lg:pt-18 pb-16 sm:pb-24 lg:pb-28 transition-colors duration-400 overflow-hidden ${
-        isDark ? 'bg-black text-white' : 'bg-[#E8DEC8] text-[#1A1815]'
-      }`}
+      className={`relative pt-10 sm:pt-14 lg:pt-18 pb-16 sm:pb-24 lg:pb-28 transition-colors duration-400 overflow-hidden ${isDark ? 'bg-black text-white' : 'bg-[#E8DEC8] text-[#1A1815]'
+        }`}
     >
       {/* Background ambient radial highlight */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className={`absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] sm:w-[900px] h-[500px] rounded-full blur-[120px] transition-opacity duration-700 ${
-            isDark ? 'bg-emerald-500/[0.035]' : 'bg-emerald-700/[0.04]'
-          }`}
+          className={`absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] sm:w-[900px] h-[500px] rounded-full blur-[120px] transition-opacity duration-700 ${isDark ? 'bg-emerald-500/[0.035]' : 'bg-emerald-700/[0.04]'
+            }`}
         />
       </div>
 
@@ -146,18 +144,16 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
         <div className="text-center max-w-3xl mx-auto space-y-4 pt-2">
           {/* Eyebrow Pill */}
           <div
-            className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border text-xs font-mono font-bold tracking-widest uppercase transition-all duration-300 shadow-sm backdrop-blur-md ${
-              isDark
+            className={`inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border text-xs font-mono font-bold tracking-widest uppercase transition-all duration-300 shadow-sm backdrop-blur-md ${isDark
                 ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.1)]'
                 : 'bg-emerald-800/10 border-emerald-700/30 text-emerald-900 shadow-sm'
-            }`}
+              }`}
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isDark ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-emerald-600 shadow-[0_0_6px_#059669]'
-                }`}
+                className={`relative inline-flex rounded-full h-2 w-2 ${isDark ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-emerald-600 shadow-[0_0_6px_#059669]'
+                  }`}
               />
             </span>
             <span>MULTI-CLASS VEHICLE INTELLIGENCE // 08 CLASSES</span>
@@ -176,9 +172,8 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
 
           {/* Supporting Editorial Description */}
           <p
-            className={`text-sm sm:text-base md:text-lg font-normal leading-relaxed max-w-2xl mx-auto text-balance ${
-              isDark ? 'text-zinc-400' : 'text-[#5C5346]'
-            }`}
+            className={`text-sm sm:text-base md:text-lg font-normal leading-relaxed max-w-2xl mx-auto text-balance ${isDark ? 'text-zinc-400' : 'text-[#5C5346]'
+              }`}
           >
             Engineered specifically for Indian mixed-traffic complexity — from high-frequency commuter auto-rickshaws to multi-axle freight haulers, verified across 8 distinct roadway taxonomy classes.
           </p>
@@ -204,11 +199,10 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
             {/* Subtle bottom-center interaction indicator */}
             <div className="relative z-10 flex h-full flex-col justify-end items-center pb-4 pointer-events-none">
               <div
-                className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] font-mono tracking-wider uppercase border transition-colors duration-300 ${
-                  isDark
+                className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] font-mono tracking-wider uppercase border transition-colors duration-300 ${isDark
                     ? 'bg-[#0E0D0B]/80 border-white/10 text-zinc-300 shadow-lg'
                     : 'bg-white/80 border-[#D8CFBF] text-[#5C5346] shadow-sm'
-                }`}
+                  }`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>Hover Stream to Pause • Click Any Vehicle to Inspect</span>
@@ -235,11 +229,10 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
               <button
                 key={item.classId}
                 onClick={() => setInspectedClass(item)}
-                className={`group relative text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
-                  isDark
+                className={`group relative text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer ${isDark
                     ? 'bg-[#0E0D0B] border-white/[0.08] hover:border-emerald-500/50 hover:bg-[#14120E] shadow-sm'
                     : 'bg-[#F9F7F2] border-[#D8CFBF] hover:border-emerald-600/50 hover:bg-white shadow-[0_2px_8px_rgba(40,30,15,0.04)]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-mono font-bold text-amber-500 dark:text-amber-400">
@@ -262,11 +255,10 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
         {/* 4. COMPACT TELEMETRY SPECIFICATION STRIP                            */}
         {/* =================================================================== */}
         <div
-          className={`rounded-2xl border p-5 sm:p-6 transition-all duration-300 ${
-            isDark
+          className={`rounded-2xl border p-5 sm:p-6 transition-all duration-300 ${isDark
               ? 'bg-[#0E0D0B] border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)]'
               : 'bg-[#F9F7F2] border-[#D8CFBF] shadow-[0_6px_24px_rgba(40,30,15,0.08)]'
-          }`}
+            }`}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6">
             <div className="space-y-1">
@@ -326,11 +318,10 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
       {inspectedClass && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
           <div
-            className={`relative w-full max-w-2xl rounded-2xl border p-6 sm:p-8 space-y-6 shadow-2xl transition-all duration-300 ${
-              isDark
+            className={`relative w-full max-w-2xl rounded-2xl border p-6 sm:p-8 space-y-6 shadow-2xl transition-all duration-300 ${isDark
                 ? 'bg-[#0E0D0B] border-white/15 text-white shadow-[0_20px_60px_rgba(0,0,0,0.8)]'
                 : 'bg-[#FAF7F0] border-[#D8CFBF] text-[#1A1815] shadow-[0_20px_60px_rgba(40,30,15,0.2)]'
-            }`}
+              }`}
           >
             {/* Header */}
             <div className="flex items-start justify-between">
@@ -354,11 +345,10 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
 
               <button
                 onClick={() => setInspectedClass(null)}
-                className={`p-2 rounded-xl border transition-colors ${
-                  isDark
+                className={`p-2 rounded-xl border transition-colors ${isDark
                     ? 'border-white/10 hover:bg-white/10 text-zinc-400 hover:text-white'
                     : 'border-[#D8CFBF] hover:bg-[#E8DEC8] text-[#5C5346] hover:text-[#1A1815]'
-                }`}
+                  }`}
                 aria-label="Close Inspector"
               >
                 ✕
@@ -403,11 +393,10 @@ export default function MultiClassVehicleSection({ theme = 'dark' }: MultiClassV
             <div className="flex items-center justify-end pt-2 border-t border-white/10">
               <button
                 onClick={() => setInspectedClass(null)}
-                className={`px-4 py-2 rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-colors ${
-                  isDark
+                className={`px-4 py-2 rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-colors ${isDark
                     ? 'bg-white text-black hover:bg-zinc-200'
                     : 'bg-[#1A1815] text-[#FAF7F0] hover:bg-black'
-                }`}
+                  }`}
               >
                 Close Inspector
               </button>

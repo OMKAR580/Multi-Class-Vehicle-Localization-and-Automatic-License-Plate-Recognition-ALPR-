@@ -34,12 +34,13 @@ async def lifespan(app: FastAPI):
         settings.APP_VERSION,
         settings.ENVIRONMENT,
     )
-    try:
-        from ai.pipeline.alpr_pipeline import ALPRPipeline
-        app.state.alpr_pipeline = ALPRPipeline()
-        logger.info("ALPRPipeline initialized in application state.")
-    except Exception as exc:
-        logger.warning("ALPRPipeline startup initialization deferred: %s", exc)
+    if settings.ENVIRONMENT != "testing":
+        try:
+            from ai.pipeline.alpr_pipeline import ALPRPipeline
+            app.state.alpr_pipeline = ALPRPipeline()
+            logger.info("ALPRPipeline initialized in application state.")
+        except Exception as exc:
+            logger.warning("ALPRPipeline startup initialization deferred: %s", exc)
     yield
     logger.info("Shutting down API server...")
 

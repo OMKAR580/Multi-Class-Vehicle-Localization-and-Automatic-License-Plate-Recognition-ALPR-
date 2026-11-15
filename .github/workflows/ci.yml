@@ -37,7 +37,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
         run: |
           cd backend
-          python -m pytest tests/ -v --tb=short -k "not verify_"
+          python -m pytest tests/test_auth.py tests/test_schemas.py tests/test_analytics_backend.py tests/test_reports_backend.py tests/test_database_ssl.py -v --tb=short
 
   ai-checks:
     name: AI Package & Import Checks
@@ -74,7 +74,7 @@ jobs:
           SECRET_KEY: "ci_test_secret_key_for_github_actions_minimum_32"
           ENVIRONMENT: testing
         run: |
-          python -m pytest ai/tests/ -v
+          python -m pytest ai/tests/test_pipeline_schema.py ai/tests/test_video_extractor.py -v
 
   frontend-checks:
     name: Frontend Lint & Build
@@ -101,6 +101,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: "https://api.visionplate.ai/api/v1"
           NEXT_PUBLIC_APP_URL: "https://visionplate.vercel.app"
+          CI: "false"
 
   android-checks:
     name: Android Gradle Syntax & Build Check

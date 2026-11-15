@@ -25,3 +25,9 @@ class BasePostProcessor(ABC):
     def clean_plate_text(self, raw_text: str) -> str:
         """Validate and format character output for Indian license plate standards."""
         pass
+
+class BaseVisualizer(ABC):
+    @abstractmethod
+    def annotate(self, image: Any, contract: Any) -> Any:
+        """Render detection visual overlays and bounding boxes onto source image."""
+        pass
