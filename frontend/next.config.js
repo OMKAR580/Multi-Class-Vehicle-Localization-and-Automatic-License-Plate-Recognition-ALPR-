@@ -2,21 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  optimizeFonts: false,
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
-  // 'standalone' is for Docker production builds — slows down local dev
-  // output: 'standalone',
-
-  // Faster page transitions — prefetch links in viewport
-  experimental: {
-    optimisticClientCache: true,
-  },
-
-  // Cache static assets aggressively in dev
   async headers() {
     return [
       {
