@@ -38,6 +38,9 @@ htmlcov/
 venv/
 ENV/
 ai/models/*.pt
+!ai/models/yolov8_vehicle.pt
+!ai/models/yolov8_plate.pt
+!ai/models/best.pt
 ai/models/*.onnx
 ai/models/*.engine
 ai/models/*.safetensors

@@ -73,6 +73,13 @@ class VehicleDetector(BaseVehicleDetector):
                 self._model = YOLO(self.model_path)
             except Exception:
                 self._model = None
+        else:
+            # Resilient fallback: standard YOLOv8 nano auto-downloads if custom weights are missing
+            try:
+                from ultralytics import YOLO
+                self._model = YOLO("yolov8n.pt")
+            except Exception:
+                self._model = None
 
     def detect(self, image: Any) -> List[Dict[str, Any]]:
         """
