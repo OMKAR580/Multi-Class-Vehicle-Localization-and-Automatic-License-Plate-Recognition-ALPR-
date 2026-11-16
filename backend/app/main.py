@@ -76,6 +76,27 @@ app.add_exception_handler(Exception, global_exception_handler)
 # Include Centralized API Router
 app.include_router(api_router)
 
+
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+async def root_health():
+    """Root health check for Render / Cloud load balancer probes."""
+    return {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.ENVIRONMENT,
+    }
+
+
+@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
+async def service_health():
+    """Generic health probe endpoint."""
+    return {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
