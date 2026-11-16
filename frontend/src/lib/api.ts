@@ -2,7 +2,11 @@
  * API Client Abstraction for communication with FastAPI Backend
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+    ? 'https://multi-class-vehicle-localization-and.onrender.com/api/v1'
+    : 'http://localhost:8000/api/v1');
 
 export interface FileUploadResponse {
   id: string;

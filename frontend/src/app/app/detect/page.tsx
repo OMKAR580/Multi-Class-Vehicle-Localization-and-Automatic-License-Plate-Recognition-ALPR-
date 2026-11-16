@@ -426,7 +426,7 @@ export default function DetectPage() {
       } else if (rawMsg.includes('415') || rawMsg.includes('Unsupported Media Type')) {
         setErrorMessage('Unsupported media format. Only JPEG, PNG, and MP4 are accepted.');
       } else if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
-        setErrorMessage('Unable to connect to backend recognition service. Please verify backend is running on port 8000.');
+        setErrorMessage('Backend is warming up (Render free tier cold start). Please wait 10 seconds and click "Run ALPR Pipeline" again.');
       } else {
         setErrorMessage(rawMsg || 'Pipeline execution failed. Please verify asset and try again.');
       }
