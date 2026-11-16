@@ -347,9 +347,8 @@ export class AuthService {
       const clientId =
         process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
         '483927994356-p6pr76if1f6cmhek6osvv29b3bm39dpd.apps.googleusercontent.com';
-      const redirectUri =
-        process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
-        `${origin}/api/auth/callback/google`;
+      // Dynamically use current site origin so live Vercel deployments never redirect to localhost
+      const redirectUri = `${origin}/api/auth/callback/google`;
       const state = Math.random().toString(36).substring(2, 15);
       return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
         clientId
@@ -361,9 +360,8 @@ export class AuthService {
     if (provider === 'github') {
       const clientId =
         process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || 'Ov23liDlMxYaQkwiKlmO';
-      const redirectUri =
-        process.env.NEXT_PUBLIC_GITHUB_REDIRECT_URI ||
-        `${origin}/api/auth/callback/github`;
+      // Dynamically use current site origin so live Vercel deployments never redirect to localhost
+      const redirectUri = `${origin}/api/auth/callback/github`;
       const state = Math.random().toString(36).substring(2, 15);
       return `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(
         clientId

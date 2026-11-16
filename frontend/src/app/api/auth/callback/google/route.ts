@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri =
-      process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || `${origin}/api/auth/callback/google`;
+    // Always use actual request origin so token exchange matches the authorization redirect
+    const redirectUri = `${origin}/api/auth/callback/google`;
 
     if (!clientId || !clientSecret) {
       throw new Error('Google OAuth credentials not configured. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local.');
