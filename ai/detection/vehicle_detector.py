@@ -107,6 +107,8 @@ class VehicleDetector(BaseVehicleDetector):
                         "bbox": xyxy,
                         "class_id": cls_id,
                     })
+            # Sort by confidence descending so highest-confidence detections are processed first
+            detections.sort(key=lambda d: d["confidence"], reverse=True)
             return detections
 
         # If model weights do not exist or runtime failed to load

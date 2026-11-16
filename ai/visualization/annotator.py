@@ -76,21 +76,26 @@ class PipelineVisualizer(BaseVisualizer):
             return image
 
         annotated = self._to_cv2(image)
+        img_h, img_w = annotated.shape[:2]
+
+        # Adaptive font scale: larger images need bigger text to remain readable
+        adaptive_scale = max(0.4, min(1.2, img_w / 1280.0 * self.font_scale * 2))
+        adaptive_thick = max(1, int(adaptive_scale * 2))
 
         # 1. Annotate vehicles and their associated plates
         for v in contract.vehicles:
             vx1, vy1, vx2, vy2 = v.bbox
-            cv2.rectangle(annotated, (vx1, vy1), (vx2, vy2), self.vehicle_color, self.thickness)
+            cv2.rectangle(annotated, (vx1, vy1), (vx2, vy2), self.vehicle_color, adaptive_thick)
 
             v_label = f"{v.type} {v.confidence:.2f}"
-            (w, h), _ = cv2.getTextSize(v_label, cv2.FONT_HERSHEY_SIMPLEX, self.font_scale, 1)
+            (w, h), _ = cv2.getTextSize(v_label, cv2.FONT_HERSHEY_SIMPLEX, adaptive_scale, 1)
             cv2.rectangle(annotated, (vx1, max(0, vy1 - h - 6)), (vx1 + w + 4, max(h + 6, vy1)), self.vehicle_color, -1)
             cv2.putText(
                 annotated,
                 v_label,
                 (vx1 + 2, max(h, vy1 - 4)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                self.font_scale,
+                adaptive_scale,
                 (255, 255, 255),
                 1,
                 cv2.LINE_AA,
@@ -99,18 +104,18 @@ class PipelineVisualizer(BaseVisualizer):
             # Draw associated plate
             if v.plate:
                 px1, py1, px2, py2 = v.plate.bbox
-                cv2.rectangle(annotated, (px1, py1), (px2, py2), self.plate_color, self.thickness)
+                cv2.rectangle(annotated, (px1, py1), (px2, py2), self.plate_color, adaptive_thick)
 
                 p_text = v.plate.text if v.plate.text else "Plate"
                 p_label = f"[{p_text}] {v.plate.confidence:.2f}"
-                (pw, ph), _ = cv2.getTextSize(p_label, cv2.FONT_HERSHEY_SIMPLEX, self.font_scale, 1)
+                (pw, ph), _ = cv2.getTextSize(p_label, cv2.FONT_HERSHEY_SIMPLEX, adaptive_scale, 1)
                 cv2.rectangle(annotated, (px1, max(0, py1 - ph - 6)), (px1 + pw + 4, max(ph + 6, py1)), self.plate_color, -1)
                 cv2.putText(
                     annotated,
                     p_label,
                     (px1 + 2, max(ph, py1 - 4)),
                     cv2.FONT_HERSHEY_SIMPLEX,
-                    self.font_scale,
+                    adaptive_scale,
                     (0, 0, 0),
                     1,
                     cv2.LINE_AA,
@@ -119,17 +124,17 @@ class PipelineVisualizer(BaseVisualizer):
         # 2. Annotate unassociated plates (if any)
         for p in getattr(contract, "unassociated_plates", []):
             px1, py1, px2, py2 = p.bbox
-            cv2.rectangle(annotated, (px1, py1), (px2, py2), self.unassociated_plate_color, self.thickness)
+            cv2.rectangle(annotated, (px1, py1), (px2, py2), self.unassociated_plate_color, adaptive_thick)
             p_text = p.text if p.text else "Plate"
             p_label = f"[{p_text}] {p.confidence:.2f}"
-            (pw, ph), _ = cv2.getTextSize(p_label, cv2.FONT_HERSHEY_SIMPLEX, self.font_scale, 1)
+            (pw, ph), _ = cv2.getTextSize(p_label, cv2.FONT_HERSHEY_SIMPLEX, adaptive_scale, 1)
             cv2.rectangle(annotated, (px1, max(0, py1 - ph - 6)), (px1 + pw + 4, max(ph + 6, py1)), self.unassociated_plate_color, -1)
             cv2.putText(
                 annotated,
                 p_label,
                 (px1 + 2, max(ph, py1 - 4)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                self.font_scale,
+                adaptive_scale,
                 (255, 255, 255),
                 1,
                 cv2.LINE_AA,

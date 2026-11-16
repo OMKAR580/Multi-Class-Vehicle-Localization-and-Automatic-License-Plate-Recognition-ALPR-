@@ -193,7 +193,12 @@ export async function fetchApi<T>(
     if (response.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('visionplate_auth_session');
       localStorage.removeItem('visionplate_token');
-      window.dispatchEvent(new Event('visionplate_auth_change'));
+      localStorage.removeItem('alpr_auth_token');
+      document.cookie = 'access_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      // Prevent infinite dispatch retry loop: cleanly redirect if session expired on protected page
+      if (window.location.pathname.startsWith('/app') && window.location.pathname !== '/app/login') {
+        window.location.href = '/app/login?error=' + encodeURIComponent('Session expired or invalid credentials. Please sign in again.');
+      }
     }
     const errorData = await response.json().catch(() => ({}));
     const message =

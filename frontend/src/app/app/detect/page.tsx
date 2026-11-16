@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
@@ -82,17 +82,17 @@ const BENCHMARK_SAMPLES: BenchmarkSample[] = [
   {
     key: 'delhi',
     label: 'Highway Traffic (Multi-Plate)',
-    icon: '🚗',
+    icon: 'ðŸš—',
     assetPath: '/assets/real_traffic_delhi.jpg',
     filename: 'real_traffic_delhi.jpg',
     mimeType: 'image/jpeg',
-    vehicleClass: '7 Vehicles • 2 Plates',
+    vehicleClass: '7 Vehicles â€¢ 2 Plates',
     description: 'Delhi roadway: UP32CR0423 & DL3CCA1750',
   },
   {
     key: 'video',
     label: 'Roadway Video (5s MP4)',
-    icon: '🎥',
+    icon: 'ðŸŽ¥',
     assetPath: '/assets/real_traffic_video.mp4',
     filename: 'real_traffic_video.mp4',
     mimeType: 'video/mp4',
@@ -102,17 +102,17 @@ const BENCHMARK_SAMPLES: BenchmarkSample[] = [
   {
     key: 'suv',
     label: 'SUV Sample (DL10CA)',
-    icon: '🚙',
+    icon: 'ðŸš™',
     assetPath: '/assets/real_suv.jpg',
     filename: 'real_suv.jpg',
     mimeType: 'image/jpeg',
-    vehicleClass: 'Car / SUV • DL10CA4829',
+    vehicleClass: 'Car / SUV â€¢ DL10CA4829',
     description: 'White SUV: DL10CA4829 plate',
   },
   {
     key: 'auto',
     label: 'Three-Wheeler Sample',
-    icon: '🛺',
+    icon: 'ðŸ›º',
     assetPath: '/assets/real_autorickshaw.jpg',
     filename: 'real_autorickshaw.jpg',
     mimeType: 'image/jpeg',
@@ -122,7 +122,7 @@ const BENCHMARK_SAMPLES: BenchmarkSample[] = [
   {
     key: 'bike',
     label: 'Motorcycle Sample',
-    icon: '🏍️',
+    icon: 'ðŸï¸',
     assetPath: '/assets/real_bullet.jpg',
     filename: 'real_bullet.jpg',
     mimeType: 'image/jpeg',
@@ -132,7 +132,7 @@ const BENCHMARK_SAMPLES: BenchmarkSample[] = [
   {
     key: 'truck',
     label: 'Commercial Truck Sample',
-    icon: '🚚',
+    icon: 'ðŸšš',
     assetPath: '/assets/real_truck.jpg',
     filename: 'real_truck.jpg',
     mimeType: 'image/jpeg',
@@ -142,7 +142,7 @@ const BENCHMARK_SAMPLES: BenchmarkSample[] = [
   {
     key: 'bus',
     label: 'Bus Sample',
-    icon: '🚌',
+    icon: 'ðŸšŒ',
     assetPath: '/assets/real_bus.jpg',
     filename: 'real_bus.jpg',
     mimeType: 'image/jpeg',
@@ -714,7 +714,7 @@ export default function DetectPage() {
                 : 'bg-zinc-300 dark:bg-white/10 text-zinc-500'
             }`}
           >
-            {activeStage > 1 ? '✓' : '1'}
+            {activeStage > 1 ? 'âœ“' : '1'}
           </span>
           <span className="truncate">Stage 01: Media Input</span>
         </div>
@@ -737,7 +737,7 @@ export default function DetectPage() {
                 : 'bg-zinc-300 dark:bg-white/10 text-zinc-500'
             }`}
           >
-            {activeStage > 2 ? '✓' : '2'}
+            {activeStage > 2 ? 'âœ“' : '2'}
           </span>
           <span className="truncate">Stage 02: Neural Pipeline</span>
         </div>
@@ -867,11 +867,11 @@ export default function DetectPage() {
                   />
                 )}
 
-                {/* 2. Interactive Real Dynamic Bounding Box Overlay (When in Original/HUD view) */}
-                {viewMode === 'original' && activeVehicles.length > 0 && (
+                {/* 2. Interactive Real Dynamic Bounding Box Overlay */}
+                {((viewMode === 'original' && activeVehicles.length > 0) || (isMediaVideo && activeVehicles.length > 0)) && (
                   <svg
                     viewBox={`0 0 ${activeMediaDimensions.width} ${activeMediaDimensions.height}`}
-                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    className="absolute inset-0 w-full h-full pointer-events-none z-20"
                     preserveAspectRatio="xMidYMid meet"
                   >
                     {activeVehicles.map((v, i) => {
@@ -912,7 +912,7 @@ export default function DetectPage() {
                             fontFamily="monospace"
                             fontWeight="bold"
                           >
-                            {v.type.toUpperCase()} • {(v.confidence * 100).toFixed(0)}%
+                            {v.type.toUpperCase()} â€¢ {(v.confidence * 100).toFixed(0)}%
                           </text>
 
                           {/* Plate Box (if detected) */}
@@ -976,7 +976,7 @@ export default function DetectPage() {
                 <Scan className="w-12 h-12 mx-auto mb-3 text-zinc-600 opacity-60" />
                 <p className="text-sm font-semibold text-zinc-400">Viewfinder Standby</p>
                 <p className="text-xs text-zinc-600 mt-1 max-w-sm">
-                  Upload a JPEG, PNG, or MP4 asset (up to 15 MB) or select a benchmark fixture to activate optical scan.
+                  Upload a JPEG, PNG, or MP4 asset (up to 15 MB) to activate optical scan.
                 </p>
               </div>
             )}
@@ -1007,11 +1007,11 @@ export default function DetectPage() {
                 {/* Conceptual Pipeline Steps */}
                 <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400">
                   <span className={pipelineStep >= 1 ? 'text-emerald-400 font-bold' : ''}>Ingest</span>
-                  <span>→</span>
+                  <span>â†’</span>
                   <span className={pipelineStep >= 2 ? 'text-emerald-400 font-bold' : ''}>Vehicles</span>
-                  <span>→</span>
+                  <span>â†’</span>
                   <span className={pipelineStep >= 3 ? 'text-emerald-400 font-bold' : ''}>Plates</span>
-                  <span>→</span>
+                  <span>â†’</span>
                   <span className={pipelineStep >= 4 ? 'text-emerald-400 font-bold' : ''}>OCR</span>
                 </div>
               </div>
@@ -1025,7 +1025,7 @@ export default function DetectPage() {
                 <>
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   <span className="font-bold text-[#1A1815] dark:text-white">
-                    {resolvedPlates.map((p) => p.text).filter(Boolean).join(' • ') || 'Plates Localized'}
+                    {resolvedPlates.map((p) => p.text).filter(Boolean).join(' â€¢ ') || 'Plates Localized'}
                   </span>
                   <span className="text-zinc-500">
                     ({(resolvedPlates[0].confidence * 100).toFixed(1)}% OCR conf)
@@ -1058,16 +1058,16 @@ export default function DetectPage() {
               {imageResult && (
                 <>
                   <span>{imageResult.processing_time_ms} ms</span>
-                  <span>•</span>
+                  <span>â€¢</span>
                   <span>
-                    {imageResult.image_width} × {imageResult.image_height} px
+                    {imageResult.image_width} Ã— {imageResult.image_height} px
                   </span>
                 </>
               )}
               {videoResult && (
                 <>
                   <span>{videoResult.duration_seconds.toFixed(1)}s</span>
-                  <span>•</span>
+                  <span>â€¢</span>
                   <span>{videoResult.sampled_frames_count} frames sampled</span>
                 </>
               )}
@@ -1266,7 +1266,13 @@ export default function DetectPage() {
                 {videoResult.frames.map((frame, idx) => (
                   <button
                     key={`frame_pill_${idx}`}
-                    onClick={() => setActiveFrameIndex(idx)}
+                    onClick={() => {
+                      setActiveFrameIndex(idx);
+                      const videoEl = viewfinderRef.current?.querySelector('video');
+                      if (videoEl) {
+                        videoEl.currentTime = frame.timestamp_seconds;
+                      }
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-mono font-medium flex-shrink-0 transition-colors cursor-pointer ${
                       activeFrameIndex === idx
                         ? 'bg-emerald-600 text-white font-bold'
@@ -1358,7 +1364,7 @@ export default function DetectPage() {
                                     : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
                                 }`}
                               >
-                                <span>{vehicle.plate!.confidence >= 0.85 ? '🟢' : vehicle.plate!.confidence >= 0.65 ? '🟡' : '🔴'}</span>
+                                <span>{vehicle.plate!.confidence >= 0.85 ? 'ðŸŸ¢' : vehicle.plate!.confidence >= 0.65 ? 'ðŸŸ¡' : 'ðŸ”´'}</span>
                                 <span>OCR: {(vehicle.plate!.confidence * 100).toFixed(0)}%</span>
                               </span>
                             </div>
@@ -1510,7 +1516,7 @@ export default function DetectPage() {
                         </span>
                       </div>
                       <div className="text-[11px] text-zinc-500 font-mono">
-                        {new Date(item.created_at).toLocaleString()} • {item.processing_time_ms ?? '0'} ms
+                        {new Date(item.created_at).toLocaleString()} â€¢ {item.processing_time_ms ?? '0'} ms
                       </div>
                     </div>
 
@@ -1544,3 +1550,4 @@ export default function DetectPage() {
     </div>
   );
 }
+

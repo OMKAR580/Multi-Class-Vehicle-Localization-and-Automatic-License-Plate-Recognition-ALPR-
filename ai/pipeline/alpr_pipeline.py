@@ -85,12 +85,15 @@ class ALPRPipeline:
         if width <= 0 or height <= 0:
             raise InvalidFileException("Image has invalid zero dimensions.")
 
-        max_dim = settings.MAX_INFERENCE_IMAGE_DIMENSION
-        if width > max_dim or height > max_dim:
-            raise RecognitionException(
-                f"Image dimensions ({width}x{height}) exceed maximum allowable inference dimension ({max_dim}px).",
-                status_code=400,
-            )
+        # Auto-scale large images (e.g. 4K, 4160px phone cameras) down to 2048px max dimension
+        # to ensure fast inference, zero OOM errors, and optimal YOLO receptive field.
+        target_max = 2048
+        if width > target_max or height > target_max:
+            scale_ratio = target_max / float(max(width, height))
+            new_w = max(1, int(round(width * scale_ratio)))
+            new_h = max(1, int(round(height * scale_ratio)))
+            pil_image = pil_image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            width, height = pil_image.size
 
         # 1. Detect Vehicles
         try:
@@ -120,11 +123,11 @@ class ALPRPipeline:
             # 2. Detect Plate ROI inside vehicle crop
             plate_box: Optional[PlateBoundingBox] = None
             try:
-                rel_plate_bbox = self.plate_detector.detect_plate(v_crop)
+                rel_plate_bbox, plate_det_conf = self.plate_detector.detect_plate_with_conf(v_crop)
             except Exception as exc:
                 if type(exc).__name__ == "ModelNotConfiguredException":
                     raise
-                rel_plate_bbox = None
+                rel_plate_bbox, plate_det_conf = None, 0.0
 
             if rel_plate_bbox and len(rel_plate_bbox) == 4:
                 # Map relative vehicle crop coordinates to absolute image coordinates
@@ -134,21 +137,29 @@ class ALPRPipeline:
                 abs_p_ymax = v_ymin + rel_plate_bbox[3]
                 p_bbox = clamp_bbox([abs_p_xmin, abs_p_ymin, abs_p_xmax, abs_p_ymax], width, height)
 
-                # Crop plate for OCR
+                # Crop plate for OCR — guard against degenerate tiny crops
                 p_xmin, p_ymin, p_xmax, p_ymax = p_bbox
-                plate_crop = (
-                    pil_image.crop((p_xmin, p_ymin, p_xmax, p_ymax))
-                    if (p_xmax > p_xmin and p_ymax > p_ymin)
-                    else v_crop
-                )
+                p_w = p_xmax - p_xmin
+                p_h = p_ymax - p_ymin
+                plate_crop = None
+                if p_w >= 20 and p_h >= 8:
+                    plate_crop = pil_image.crop((p_xmin, p_ymin, p_xmax, p_ymax))
+                elif v_xmax > v_xmin and v_ymax > v_ymin:
+                    plate_crop = v_crop  # fallback: OCR full vehicle crop
 
                 # 3. OCR Text Extraction & Cleaning
-                try:
-                    raw_text, ocr_conf = self.ocr_engine.extract_text(plate_crop)
-                    cleaned_text = self.cleaner.clean_plate_text(raw_text)
-                except Exception:
-                    cleaned_text = ""
-                    ocr_conf = 0.0
+                if plate_crop is None:
+                    cleaned_text, ocr_conf = "", 0.0
+                else:
+                    try:
+                        raw_text, ocr_conf = self.ocr_engine.extract_text(plate_crop)
+                        cleaned_text = self.cleaner.clean_plate_text(raw_text)
+                        # Final guard: discard garbage strings that are too long or too short
+                        if len(cleaned_text) > 12 or len(cleaned_text) < 4:
+                            cleaned_text = ""
+                    except Exception:
+                        cleaned_text = ""
+                        ocr_conf = 0.0
 
                 plate_box = PlateBoundingBox(
                     text=cleaned_text,
@@ -191,11 +202,19 @@ class ALPRPipeline:
                     for vb in vehicle_boxes:
                         if vb.plate is None:
                             vx1, vy1, vx2, vy2 = vb.bbox
-                            if vx1 <= gcx <= vx2 and vy1 <= gcy <= vy2:
+                            vh = vy2 - vy1
+                            # Plates are on bottom bumpers, so expand vertical search range downwards
+                            exp_vy1 = max(0, vy1 - int(vh * 0.10))
+                            exp_vy2 = min(height, vy2 + int(vh * 0.30))
+                            h_overlap = max(0, min(vx2, gx2) - max(vx1, gx1))
+                            
+                            if (h_overlap > 0 and exp_vy1 <= gcy <= exp_vy2) or (vx1 <= gcx <= vx2 and vy1 <= gcy <= vy2):
                                 p_crop = pil_image.crop((gx1, gy1, gx2, gy2))
                                 try:
                                     raw_text, ocr_conf = self.ocr_engine.extract_text(p_crop)
                                     cleaned_text = self.cleaner.clean_plate_text(raw_text)
+                                    if len(cleaned_text) > 12 or len(cleaned_text) < 4:
+                                        cleaned_text = ""
                                 except Exception:
                                     cleaned_text = ""
                                     ocr_conf = 0.0
@@ -208,19 +227,32 @@ class ALPRPipeline:
                                 assigned_to_vehicle = True
                                 break
 
-                    if not assigned_to_vehicle and (len(vehicle_boxes) == 0):
+                    if not assigned_to_vehicle:
                         p_crop = pil_image.crop((gx1, gy1, gx2, gy2))
                         try:
                             raw_text, ocr_conf = self.ocr_engine.extract_text(p_crop)
                             cleaned_text = self.cleaner.clean_plate_text(raw_text)
+                            if len(cleaned_text) > 12 or len(cleaned_text) < 4:
+                                cleaned_text = ""
                         except Exception:
                             cleaned_text = ""
                             ocr_conf = 0.0
-                        unassociated_plates.append(
-                            PlateBoundingBox(
-                                text=cleaned_text,
-                                confidence=round(ocr_conf, 2) if ocr_conf > 0 else 0.75,
+                        unassoc_item = PlateBoundingBox(
+                            text=cleaned_text,
+                            confidence=round(ocr_conf, 2) if ocr_conf > 0 else 0.75,
+                            bbox=g_bbox,
+                        )
+                        unassociated_plates.append(unassoc_item)
+
+                        # Standalone plate promotion:
+                        # Ensure every detected plate is represented as an identifiable detection
+                        # in the viewfinder, list, and telemetry dossier
+                        vehicle_boxes.append(
+                            VehicleBoundingBox(
+                                type="car",
+                                confidence=round(float(gp.get("confidence", 0.90)), 2),
                                 bbox=g_bbox,
+                                plate=unassoc_item,
                             )
                         )
             except Exception:

@@ -82,7 +82,7 @@ class PlateDetector(BasePlateDetector):
             results = self._model(
                 vehicle_crop,
                 conf=self.min_confidence,
-                iou=0.45,
+                iou=0.35,  # Lower IOU for better handling of side-by-side plates
                 verbose=False,
             )
         except Exception as exc:

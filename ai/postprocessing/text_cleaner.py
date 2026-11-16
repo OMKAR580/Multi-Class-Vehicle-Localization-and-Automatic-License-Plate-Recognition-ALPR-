@@ -28,11 +28,44 @@ class IndianPlateCleaner(BasePostProcessor):
         if not raw_text:
             return ""
         clean = re.sub(r"[^A-Z0-9]", "", raw_text.upper())
+
+        # Hard reject: too long (garbage from body text) or too short
+        if len(clean) > 12 or len(clean) < 4:
+            return ""
+
         if len(clean) >= 2:
             prefix = clean[:2]
-            state_fixes = {"PL": "DL", "OL": "DL", "0L": "DL", "1P": "UP", "IP": "UP", "JP": "UP", "1K": "JK"}
+            # Extended OCR confusion fixes for Indian state codes
+            # Maps common mis-reads → correct state code
+            state_fixes = {
+                "PL": "DL", "OL": "DL", "0L": "DL", "D1": "DL",
+                "1P": "UP", "IP": "UP", "JP": "UP", "VP": "UP",
+                "1K": "JK", "JL": "KL", "KI": "KA", "K4": "KA",
+                "RR": "RJ", "MR": "MH", "M4": "MH", "TM": "TN",
+                "W8": "WB", "W6": "WB", "GB": "GJ", "GG": "GJ",
+                "PR": "PB", "P8": "PB", "H9": "HP", "HR0": "HR",
+            }
             if prefix in state_fixes and prefix not in self.INDIAN_STATE_CODES:
                 clean = state_fixes[prefix] + clean[2:]
+
+        # Only apply positional digit↔alpha correction for strings that match
+        # valid Indian plate length (9 or 10 chars). For everything else, return as-is
+        # to avoid mangling partial or non-standard reads into worse garbage.
+
+        # 8-char format: AA D A DDDD (e.g. KL9C2763 — single-digit RTO + single-letter series)
+        if len(clean) == 8:
+            c = list(clean)
+            for i in [0, 1]:
+                if c[i] in self.DIGIT_TO_ALPHA:
+                    c[i] = self.DIGIT_TO_ALPHA[c[i]]
+            if c[2] in self.ALPHA_TO_DIGIT:
+                c[2] = self.ALPHA_TO_DIGIT[c[2]]
+            if c[3] in self.DIGIT_TO_ALPHA:
+                c[3] = self.DIGIT_TO_ALPHA[c[3]]
+            for i in [4, 5, 6, 7]:
+                if c[i] in self.ALPHA_TO_DIGIT:
+                    c[i] = self.ALPHA_TO_DIGIT[c[i]]
+            clean = "".join(c)
 
         # Standard 10-char Indian format: AA DD AA DDDD (e.g. UP32CR0423)
         if len(clean) == 10:

@@ -125,6 +125,13 @@ class RecognitionService:
             from ai.visualization.annotator import PipelineVisualizer
             vis = PipelineVisualizer()
             with Image.open(io.BytesIO(image_bytes)) as pil_img:
+                if max(pil_img.size) > 2048:
+                    ratio = 2048.0 / float(max(pil_img.size))
+                    pil_img = pil_img.resize(
+                        (int(round(pil_img.size[0] * ratio)), int(round(pil_img.size[1] * ratio))),
+                        Image.Resampling.LANCZOS
+                    )
+                image_width, image_height = pil_img.size
                 annotated_bgr = vis.annotate(pil_img, ai_contract)
                 annotated_b64 = vis.to_base64(annotated_bgr, format="JPEG")
         except Exception as vis_exc:

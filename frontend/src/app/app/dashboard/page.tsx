@@ -64,9 +64,12 @@ export default function DashboardPage() {
     setSession(active);
 
     const handleAuthChange = () => {
-      setOverview(null);
-      setSession(AuthService.getSession());
-      fetchOverview();
+      const current = AuthService.getSession();
+      setSession(current);
+      if (current?.token) {
+        setOverview(null);
+        fetchOverview();
+      }
     };
     window.addEventListener('visionplate_auth_change', handleAuthChange);
 
