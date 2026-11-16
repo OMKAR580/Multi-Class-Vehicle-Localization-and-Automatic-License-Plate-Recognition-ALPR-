@@ -56,6 +56,7 @@ import {
   FileText,
   Loader2,
 } from 'lucide-react';
+import { IllosArt } from '@/components/ui/illos-upload-dropzone';
 
 // ==============================================================================
 // 1. Authoritative Upload Constants & Constraints (Aligned with Backend)
@@ -1156,7 +1157,7 @@ export default function DetectPage() {
               Upload roadway footage to run YOLOv8 vehicle detection and Indian license plate OCR.
             </p>
 
-            {/* Drag & Drop Area */}
+            {/* Drag & Drop Area with Isometric Animation */}
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -1165,21 +1166,44 @@ export default function DetectPage() {
               onDragLeave={() => setIsDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`p-6 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${
+              className={`p-4 sm:p-5 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
                 isDragOver
-                  ? 'border-emerald-500 bg-emerald-500/10'
+                  ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20'
                   : 'border-[#C7BBA5]/70 dark:border-white/15 hover:border-emerald-600 dark:hover:border-emerald-400 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
               }`}
             >
-              <Upload className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-2" />
-              <span className="text-xs font-semibold text-[#1A1815] dark:text-white text-center">
-                {selectedFile
-                  ? `Selected: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`
-                  : 'Choose File or Drag & Drop'}
-              </span>
-              <span className="text-[10px] text-zinc-500 font-mono mt-1">
-                Supports JPG, PNG, MP4 up to 15 MB
-              </span>
+              <div className="w-full max-w-[240px] sm:max-w-[280px] mb-1 pointer-events-none transition-transform duration-300 hover:scale-105">
+                <IllosArt
+                  className="w-full h-auto drop-shadow-sm"
+                  style={
+                    {
+                      '--illos-dark': isDark ? 1 : 0,
+                      '--illos-ground': isDark ? '#1a1815' : '#faf7f2',
+                      '--illos-ink': isDark ? '#f4f4f5' : '#27272a',
+                      '--illos-accent': '#10b981',
+                    } as React.CSSProperties
+                  }
+                />
+              </div>
+
+              <div className="flex flex-col items-center gap-1 text-center">
+                <span className="text-xs font-semibold text-[#1A1815] dark:text-white">
+                  {selectedFile ? (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal">
+                        ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </span>
+                  ) : (
+                    'Choose File or Drag & Drop'
+                  )}
+                </span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                  {selectedFile ? 'Click or drop another file to replace' : 'Supports JPG, PNG, MP4 up to 15 MB'}
+                </span>
+              </div>
 
               <input
                 ref={fileInputRef}
