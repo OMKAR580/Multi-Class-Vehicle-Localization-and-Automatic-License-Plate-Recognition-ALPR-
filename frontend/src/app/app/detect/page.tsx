@@ -786,11 +786,11 @@ export default function DetectPage() {
       </div>
 
       {/* Main Studio Dual Panel Workspace (Responsive 12-Column Grid) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Interactive Viewfinder Canvas (7 Cols) */}
-        <div className="lg:col-span-7 rounded-3xl p-5 sm:p-6 gw-panel shadow-xs flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Interactive Viewfinder Canvas (7 Cols) - Sticky & Compact */}
+        <div className="lg:col-span-7 rounded-3xl p-5 sm:p-6 gw-panel shadow-xs flex flex-col gap-3 self-start lg:sticky lg:top-24">
           {/* Viewfinder Header Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
@@ -1038,7 +1038,7 @@ export default function DetectPage() {
           </div>
 
           {/* Viewfinder Telemetry & Status Bar */}
-          <div className="mt-4 pt-3 border-t border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div className="pt-2 border-t border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
             <div className="flex items-center gap-2">
               {status === 'completed' && resolvedPlates.length > 0 ? (
                 <>
