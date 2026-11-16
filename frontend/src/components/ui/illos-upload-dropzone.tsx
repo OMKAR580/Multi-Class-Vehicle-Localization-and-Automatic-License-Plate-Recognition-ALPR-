@@ -219,3 +219,4 @@ function loopInView(host: HTMLElement): () => void {
     io.disconnect();
   };
 }
+

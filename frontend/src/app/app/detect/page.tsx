@@ -762,49 +762,6 @@ export default function DetectPage() {
         </div>
       </div>
 
-      {/* Verified Local Benchmark Reference Bar */}
-      <div className="p-4 rounded-3xl gw-panel shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-mono flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
-            <span>Local Roadway Benchmarks (Verified Public Assets):</span>
-          </div>
-          <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
-            Click any fixture to stage a genuine local File and run live inference
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-          {BENCHMARK_SAMPLES.map((sample) => {
-            const isLoading = loadingBenchmark === sample.key;
-            const isSelected = activeBenchmark === sample.key && selectedFile?.name === sample.filename;
-
-            return (
-              <button
-                key={sample.key}
-                type="button"
-                disabled={isLoading || status === 'uploading' || status === 'processing'}
-                onClick={() => handleSelectBenchmark(sample)}
-                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative ${
-                  isSelected
-                    ? 'border-emerald-600 bg-emerald-500/10 dark:border-emerald-400 dark:bg-emerald-500/15 shadow-xs font-bold'
-                    : 'border-[#C7BBA5]/60 dark:border-white/10 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
-                }`}
-              >
-                {isLoading && (
-                  <div className="absolute top-2 right-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-                  </div>
-                )}
-                <div className="text-xl mb-1">{sample.icon}</div>
-                <div className="text-xs font-bold text-[#1A1815] dark:text-white truncate">{sample.label}</div>
-                <div className="text-[10px] text-zinc-500 font-mono mt-0.5 truncate">{sample.vehicleClass}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Main Studio Dual Panel Workspace (Responsive 12-Column Grid) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Interactive Viewfinder Canvas (7 Cols) - Sticky & Compact */}
@@ -881,7 +838,7 @@ export default function DetectPage() {
           {/* Viewfinder Canvas Area */}
           <div
             ref={viewfinderRef}
-            className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-black/20 dark:border-white/15 flex items-center justify-center shadow-lg group select-none"
+            className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-black/20 dark:border-white/15 flex items-center justify-center shadow-lg group"
           >
             {mediaPreviewUrl || imageResult?.annotated_image ? (
               <>
@@ -892,11 +849,15 @@ export default function DetectPage() {
                     alt="AI Annotated Inference Output"
                     className="w-full h-full object-contain"
                   />
-                ) : isMediaVideo && selectedFile ? (
+                ) : isMediaVideo && mediaPreviewUrl ? (
                   <video
-                    src={mediaPreviewUrl!}
+                    key={mediaPreviewUrl}
+                    src={mediaPreviewUrl}
                     controls
-                    className="w-full h-full object-contain"
+                    playsInline
+                    preload="auto"
+                    className="w-full h-full object-contain relative z-10 cursor-pointer"
+                    title="Uploaded Video Playback Preview"
                   />
                 ) : (
                   <img
