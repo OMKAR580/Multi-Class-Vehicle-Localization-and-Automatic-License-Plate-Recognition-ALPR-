@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const clientSecret = process.env.GITHUB_CLIENT_SECRET;
     // Canonicalize any *.vercel.app preview or branch domains to the registered production domain
     const effectiveOrigin = origin.includes('.vercel.app')
-      ? (process.env.NEXT_PUBLIC_APP_URL || 'https://multi-class-vehicle-localization-an-beta.vercel.app')
+      ? 'https://multi-class-vehicle-localization-an-beta.vercel.app'
       : origin;
     const redirectUri = `${effectiveOrigin}/api/auth/callback/github`;
 

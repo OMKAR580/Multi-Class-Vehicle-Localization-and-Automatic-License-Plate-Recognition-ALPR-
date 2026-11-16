@@ -344,7 +344,7 @@ export class AuthService {
     let origin = window.location.origin;
     // Canonicalize any *.vercel.app preview or branch domains to the official production domain registered in Google & GitHub OAuth
     if (origin.includes('.vercel.app')) {
-      origin = process.env.NEXT_PUBLIC_APP_URL || 'https://multi-class-vehicle-localization-an-beta.vercel.app';
+      origin = 'https://multi-class-vehicle-localization-an-beta.vercel.app';
     }
 
     if (provider === 'google') {
