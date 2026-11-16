@@ -80,14 +80,34 @@ interface BenchmarkSample {
 
 const BENCHMARK_SAMPLES: BenchmarkSample[] = [
   {
-    key: 'suv',
-    label: 'SUV Sample',
+    key: 'delhi',
+    label: 'Highway Traffic (Multi-Plate)',
     icon: '🚗',
+    assetPath: '/assets/real_traffic_delhi.jpg',
+    filename: 'real_traffic_delhi.jpg',
+    mimeType: 'image/jpeg',
+    vehicleClass: '7 Vehicles • 2 Plates',
+    description: 'Delhi roadway: UP32CR0423 & DL3CCA1750',
+  },
+  {
+    key: 'video',
+    label: 'Roadway Video (5s MP4)',
+    icon: '🎥',
+    assetPath: '/assets/real_traffic_video.mp4',
+    filename: 'real_traffic_video.mp4',
+    mimeType: 'video/mp4',
+    vehicleClass: 'Live Video Feed',
+    description: '5s sampled frames video inference',
+  },
+  {
+    key: 'suv',
+    label: 'SUV Sample (DL10CA)',
+    icon: '🚙',
     assetPath: '/assets/real_suv.jpg',
     filename: 'real_suv.jpg',
     mimeType: 'image/jpeg',
-    vehicleClass: 'Car / SUV',
-    description: 'White SUV in roadway corridor',
+    vehicleClass: 'Car / SUV • DL10CA4829',
+    description: 'White SUV: DL10CA4829 plate',
   },
   {
     key: 'auto',
