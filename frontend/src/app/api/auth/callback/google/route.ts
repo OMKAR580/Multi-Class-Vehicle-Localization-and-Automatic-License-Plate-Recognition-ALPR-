@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientId =
+      process.env.GOOGLE_CLIENT_ID ||
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      '666838598365-q60r1qd4orli5qfr57j7l6kgohj7k80l.apps.googleusercontent.com';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     // Always use actual request origin so token exchange matches the authorization redirect
     const redirectUri = `${origin}/api/auth/callback/google`;

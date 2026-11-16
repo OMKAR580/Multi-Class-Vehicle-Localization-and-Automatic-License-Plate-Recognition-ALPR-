@@ -346,7 +346,7 @@ export class AuthService {
     if (provider === 'google') {
       const clientId =
         process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-        '483927994356-p6pr76if1f6cmhek6osvv29b3bm39dpd.apps.googleusercontent.com';
+        '666838598365-q60r1qd4orli5qfr57j7l6kgohj7k80l.apps.googleusercontent.com';
       // Dynamically use current site origin so live Vercel deployments never redirect to localhost
       const redirectUri = `${origin}/api/auth/callback/google`;
       const state = Math.random().toString(36).substring(2, 15);
