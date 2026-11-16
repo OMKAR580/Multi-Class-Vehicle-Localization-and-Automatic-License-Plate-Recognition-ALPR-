@@ -2,11 +2,23 @@
  * API Client Abstraction for communication with FastAPI Backend
  */
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
-    ? 'https://multi-class-vehicle-localization-and.onrender.com/api/v1'
-    : 'http://localhost:8000/api/v1');
+function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  // If we have a valid remote URL that doesn't point to localhost, use it
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
+  }
+  // If running in browser on any non-local hostname (e.g. *.vercel.app), strictly use live Render backend
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal) {
+      return 'https://multi-class-vehicle-localization-and.onrender.com/api/v1';
+    }
+  }
+  return envUrl || 'http://localhost:8000/api/v1';
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export interface FileUploadResponse {
   id: string;

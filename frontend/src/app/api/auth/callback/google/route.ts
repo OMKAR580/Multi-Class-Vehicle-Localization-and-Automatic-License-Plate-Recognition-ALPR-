@@ -97,9 +97,9 @@ export async function GET(request: NextRequest) {
     // Synchronize with FastAPI backend and Supabase PostgreSQL
     const backendUrl =
       process.env.INTERNAL_BACKEND_URL ||
-      (process.env.NEXT_PUBLIC_API_URL
-        ? process.env.NEXT_PUBLIC_API_URL.replace('localhost', '127.0.0.1')
-        : 'http://127.0.0.1:8000/api/v1');
+      (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')
+        ? process.env.NEXT_PUBLIC_API_URL
+        : 'https://multi-class-vehicle-localization-and.onrender.com/api/v1');
     let syncData: any = null;
     try {
       const syncResp = await fetch(`${backendUrl}/auth/oauth/sync`, {
