@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clientId = process.env.GITHUB_CLIENT_ID || process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+    const clientId =
+      process.env.GITHUB_CLIENT_ID ||
+      process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID ||
+      'Ov23liBKszjLELwW0wj6';
     const clientSecret = process.env.GITHUB_CLIENT_SECRET;
     // Always use actual request origin so token exchange matches the authorization redirect
     const redirectUri = `${origin}/api/auth/callback/github`;

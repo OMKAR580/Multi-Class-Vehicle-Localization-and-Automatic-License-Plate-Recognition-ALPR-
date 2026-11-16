@@ -359,7 +359,7 @@ export class AuthService {
 
     if (provider === 'github') {
       const clientId =
-        process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || 'Ov23liDlMxYaQkwiKlmO';
+        process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || 'Ov23liBKszjLELwW0wj6';
       // Dynamically use current site origin so live Vercel deployments never redirect to localhost
       const redirectUri = `${origin}/api/auth/callback/github`;
       const state = Math.random().toString(36).substring(2, 15);
