@@ -109,10 +109,8 @@ class VehicleDetector(BaseVehicleDetector):
                     })
             return detections
 
-        # If model weights do not exist or failed to load
-        if not os.path.exists(self.model_path):
+        # If model weights do not exist or runtime failed to load
+        if self._model is None:
             raise ModelNotConfiguredException(
-                f"Vehicle detection model weights not found at '{self.model_path}'."
+                f"Vehicle detection model runtime unavailable at '{self.model_path}'."
             )
-
-        return []
