@@ -49,8 +49,11 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
       '666838598365-q60r1qd4orli5qfr57j7l6kgohj7k80l.apps.googleusercontent.com';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    // Always use actual request origin so token exchange matches the authorization redirect
-    const redirectUri = `${origin}/api/auth/callback/google`;
+    // Canonicalize any *.vercel.app preview or branch domains to the registered production domain
+    const effectiveOrigin = origin.includes('.vercel.app')
+      ? (process.env.NEXT_PUBLIC_APP_URL || 'https://multi-class-vehicle-localization-an-beta.vercel.app')
+      : origin;
+    const redirectUri = `${effectiveOrigin}/api/auth/callback/google`;
 
     if (!clientId || !clientSecret) {
       throw new Error('Google OAuth credentials not configured. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local.');

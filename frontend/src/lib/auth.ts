@@ -341,7 +341,11 @@ export class AuthService {
    */
   static getOAuthAuthorizationUrl(provider: 'google' | 'github'): string {
     if (typeof window === 'undefined') return '#';
-    const origin = window.location.origin;
+    let origin = window.location.origin;
+    // Canonicalize any *.vercel.app preview or branch domains to the official production domain registered in Google & GitHub OAuth
+    if (origin.includes('.vercel.app')) {
+      origin = process.env.NEXT_PUBLIC_APP_URL || 'https://multi-class-vehicle-localization-an-beta.vercel.app';
+    }
 
     if (provider === 'google') {
       const clientId =

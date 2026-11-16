@@ -49,8 +49,11 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID ||
       'Ov23liBKszjLELwW0wj6';
     const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-    // Always use actual request origin so token exchange matches the authorization redirect
-    const redirectUri = `${origin}/api/auth/callback/github`;
+    // Canonicalize any *.vercel.app preview or branch domains to the registered production domain
+    const effectiveOrigin = origin.includes('.vercel.app')
+      ? (process.env.NEXT_PUBLIC_APP_URL || 'https://multi-class-vehicle-localization-an-beta.vercel.app')
+      : origin;
+    const redirectUri = `${effectiveOrigin}/api/auth/callback/github`;
 
     if (!clientId || !clientSecret) {
       throw new Error('GitHub OAuth credentials not configured. Please check GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env.local.');
