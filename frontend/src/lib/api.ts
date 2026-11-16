@@ -2,23 +2,31 @@
  * API Client Abstraction for communication with FastAPI Backend
  */
 
-function getApiBaseUrl(): string {
+/**
+ * Dynamic resolver for backend API URL.
+ * Guarantees that in any cloud/Vercel environment, it targets the live Render backend
+ * and NEVER falls back to localhost:8000.
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    }
+  }
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  // If we have a valid remote URL that doesn't point to localhost, use it
   if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
     return envUrl;
   }
-  // If running in browser on any non-local hostname (e.g. *.vercel.app), strictly use live Render backend
-  if (typeof window !== 'undefined') {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isLocal) {
-      return 'https://multi-class-vehicle-localization-and.onrender.com/api/v1';
-    }
-  }
-  return envUrl || 'http://localhost:8000/api/v1';
+  return 'https://multi-class-vehicle-localization-and.onrender.com/api/v1';
 }
 
-export const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL &&
+  !process.env.NEXT_PUBLIC_API_URL.includes('localhost') &&
+  !process.env.NEXT_PUBLIC_API_URL.includes('127.0.0.1')
+    ? process.env.NEXT_PUBLIC_API_URL
+    : 'https://multi-class-vehicle-localization-and.onrender.com/api/v1';
 
 export interface FileUploadResponse {
   id: string;
@@ -174,7 +182,8 @@ export async function fetchApi<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...options,
     credentials: 'include',
     headers,
@@ -671,7 +680,7 @@ export async function downloadSavedReportBlob(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}/reports/${encodeURIComponent(reportId)}/download`, {
+  const response = await fetch(`${getApiBaseUrl()}/reports/${encodeURIComponent(reportId)}/download`, {
     method: 'GET',
     credentials: 'include',
     headers,

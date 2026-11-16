@@ -5,7 +5,7 @@
  * HttpOnly session cookies, and OAuth provider integrations.
  */
 
-import { API_BASE_URL } from './api';
+import { API_BASE_URL, getApiBaseUrl } from './api';
 
 export interface UserProfile {
   id: string;
@@ -73,7 +73,7 @@ export class AuthService {
     }
 
     try {
-      const resp = await fetch(`${API_BASE_URL}/auth/register`, {
+      const resp = await fetch(`${getApiBaseUrl()}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -114,7 +114,7 @@ export class AuthService {
       };
 
       try {
-        const meResp = await fetch(`${API_BASE_URL}/auth/me`, {
+        const meResp = await fetch(`${getApiBaseUrl()}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
           credentials: 'include',
         });
@@ -173,7 +173,7 @@ export class AuthService {
       (password === 'VisionPlate2026!' || password === 'demo123' || password === 'operator');
 
     try {
-      const resp = await fetch(`${API_BASE_URL}/auth/login`, {
+      const resp = await fetch(`${getApiBaseUrl()}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -199,7 +199,7 @@ export class AuthService {
         };
 
         try {
-          const meResp = await fetch(`${API_BASE_URL}/auth/me`, {
+          const meResp = await fetch(`${getApiBaseUrl()}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
             credentials: 'include',
           });
@@ -292,7 +292,7 @@ export class AuthService {
     username?: string;
     password?: string;
   }): Promise<AuthSession> {
-    const resp = await fetch(`${API_BASE_URL}/auth/oauth/sync`, {
+    const resp = await fetch(`${getApiBaseUrl()}/auth/oauth/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -375,7 +375,7 @@ export class AuthService {
     }
 
     const targetRedirect = `${origin}/app/dashboard`;
-    return `${API_BASE_URL}/auth/${provider}/login?redirect_url=${encodeURIComponent(targetRedirect)}`;
+    return `${getApiBaseUrl()}/auth/${provider}/login?redirect_url=${encodeURIComponent(targetRedirect)}`;
   }
 
   /**
@@ -391,7 +391,7 @@ export class AuthService {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const meResp = await fetch(`${API_BASE_URL}/auth/me`, {
+      const meResp = await fetch(`${getApiBaseUrl()}/auth/me`, {
         credentials: 'include',
         headers,
       });
@@ -614,7 +614,7 @@ export class AuthService {
     if (typeof window === 'undefined') return;
 
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetch(`${getApiBaseUrl()}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

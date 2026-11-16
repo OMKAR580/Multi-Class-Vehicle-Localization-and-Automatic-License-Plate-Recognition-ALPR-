@@ -6,6 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { AuthService, AuthSession } from '@/lib/auth';
 import {
   API_BASE_URL,
+  getApiBaseUrl,
   uploadFile,
   recognizeImage,
   recognizeVideo,
@@ -426,7 +427,7 @@ export default function DetectPage() {
       } else if (rawMsg.includes('415') || rawMsg.includes('Unsupported Media Type')) {
         setErrorMessage('Unsupported media format. Only JPEG, PNG, and MP4 are accepted.');
       } else if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
-        setErrorMessage('Backend is warming up (Render free tier cold start). Please wait 10 seconds and click "Run ALPR Pipeline" again.');
+        setErrorMessage(`Backend is connecting (${getApiBaseUrl()}). If Render was asleep, please wait 5-10s and click again.`);
       } else {
         setErrorMessage(rawMsg || 'Pipeline execution failed. Please verify asset and try again.');
       }
