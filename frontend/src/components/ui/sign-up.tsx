@@ -409,8 +409,8 @@ export const AuthComponent = ({
         fireSideCanons();
         setModalStatus('success');
         setTimeout(() => {
-          router.push(onSuccessRedirect);
-        }, 1000);
+          window.location.href = onSuccessRedirect;
+        }, 700);
       }, totalDuration);
     } catch (err: any) {
       setModalErrorMessage(err.message || "Failed to initialize demo session.");
@@ -430,8 +430,8 @@ export const AuthComponent = ({
         fireSideCanons();
         setModalStatus('success');
         setTimeout(() => {
-          router.push(onSuccessRedirect);
-        }, 1000);
+          window.location.href = onSuccessRedirect;
+        }, 700);
       }, totalDuration);
     } catch (err: any) {
       const code = err.code || '';
@@ -505,8 +505,8 @@ export const AuthComponent = ({
           fireSideCanons();
           setModalStatus('success');
           setTimeout(() => {
-            router.push(onSuccessRedirect);
-          }, 1000);
+            window.location.href = onSuccessRedirect;
+          }, 700);
         }, totalDuration);
       } catch (err: any) {
         const code = err.code || '';
