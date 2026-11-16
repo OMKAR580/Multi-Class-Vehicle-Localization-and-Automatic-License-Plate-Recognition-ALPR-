@@ -61,10 +61,17 @@ if not is_sqlite:
     engine_kwargs["pool_size"] = 5        # Supabase free tier: max 20 connections
     engine_kwargs["max_overflow"] = 10
     if is_remote_postgres:
-        ssl_ctx = build_postgres_ssl_context(
-            ca_cert_path=settings.POSTGRES_CA_CERT_PATH,
-            verify=settings.POSTGRES_SSL_VERIFY,
-        )
+        is_supabase_pooler = "pooler.supabase.com" in db_url or "supabase.co" in db_url
+        if is_supabase_pooler and not settings.POSTGRES_CA_CERT_PATH:
+            # Supabase Cloud poolers terminate TLS with Supabase internal CA certs
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_ctx = build_postgres_ssl_context(
+                ca_cert_path=settings.POSTGRES_CA_CERT_PATH,
+                verify=settings.POSTGRES_SSL_VERIFY,
+            )
         engine_kwargs["connect_args"] = {
             "ssl": ssl_ctx,
             "statement_cache_size": 0,
