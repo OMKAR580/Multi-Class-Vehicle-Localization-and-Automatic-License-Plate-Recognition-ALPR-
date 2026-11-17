@@ -33,9 +33,14 @@ async def get_current_user(
 
     # Resilience: Support Demo Operator and offline tokens during local demos and presentation
     if token.endswith(".demo_signature_visionplate") or "usr_demo_" in token or token == "demo_token" or token.startswith("vp_guest_"):
+        # Return existing database seed operator to satisfy foreign key constraints
+        user_repo = UserRepository(db)
+        seed_user = await user_repo.get_by_id("usr_operator_seed_001")
+        if seed_user:
+            return seed_user
         return User(
-            id="usr_demo_operator",
-            username="demo_operator",
+            id="usr_operator_seed_001",
+            username="operator",
             email="operator@visionplate.ai",
             full_name="Demo Operator",
             role="operator",
@@ -81,10 +86,10 @@ async def get_current_user(
 
     if not user:
         if settings.ENVIRONMENT == "development" and user_id:
-            # Ephemeral user fallback for development / local presentation
+            # Ephemeral user fallback for development: upsert into database to satisfy foreign keys
             safe_email = email_claim or f"{user_id}@visionplate.ai"
             safe_name = name_claim or safe_email.split("@")[0]
-            return User(
+            new_user = User(
                 id=user_id,
                 username=safe_email.split("@")[0],
                 email=safe_email,
@@ -93,6 +98,15 @@ async def get_current_user(
                 is_active=True,
                 email_verified=True,
             )
+            try:
+                created_user = await user_repo.create(new_user)
+                return created_user
+            except Exception:
+                # If concurrent creation occurred or fallback needed, fetch or return seed user
+                seed_user = await user_repo.get_by_id("usr_operator_seed_001")
+                if seed_user:
+                    return seed_user
+                return new_user
         raise UnauthorizedException("User not found")
 
     if not user.is_active:
