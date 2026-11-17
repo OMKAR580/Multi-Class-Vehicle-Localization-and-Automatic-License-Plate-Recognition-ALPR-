@@ -176,35 +176,40 @@ class IndianPlateOCR(BasePlateOCR):
                         if len(clean_str) < 4 or len(clean_str) > 12:
                             continue
 
-                        # Try to get real per-character confidence from Tesseract
-                        real_conf = 0.85
+                        # Calculate robust confidence based on pattern match quality and character detection
+                        # When Tesseract runs on a cropped single line, image_to_data often outputs 0 for non-standard crops
+                        # So we calculate confidence proportionally to the pattern match quality and string plausibility:
+                        score = 5
+                        base_conf = 0.70
+                        if FULL_PLATE_RE.match(clean_str) or BH_PLATE_RE.match(clean_str):
+                            score = 100
+                            base_conf = 0.94
+                        elif PREFIX_RE.match(clean_str) and 7 <= len(clean_str) <= 11:
+                            score = 50
+                            base_conf = 0.86
+                        elif PREFIX_RE.match(clean_str):
+                            score = 20
+                            base_conf = 0.78
+                        elif len(clean_str) >= 4:
+                            base_conf = 0.72
+
+                        # Check if Tesseract provided a meaningful non-zero confidence
                         try:
                             data = self._pytesseract.image_to_data(
                                 view, config=cfg,
                                 output_type=self._pytesseract.Output.DICT
                             )
-                            confs = [
-                                int(c) for c in data["conf"]
-                                if str(c).lstrip("-").isdigit() and int(c) >= 0
+                            valid_confs = [
+                                int(c) for c, t in zip(data["conf"], data["text"])
+                                if str(c).lstrip("-").isdigit() and int(c) > 0 and t.strip()
                             ]
-                            if confs:
-                                real_conf = round(sum(confs) / len(confs) / 100.0, 3)
-                                real_conf = max(0.1, min(0.99, real_conf))
+                            if valid_confs:
+                                t_conf = sum(valid_confs) / len(valid_confs) / 100.0
+                                real_conf = round(0.5 * base_conf + 0.5 * t_conf, 2)
+                            else:
+                                real_conf = base_conf
                         except Exception:
-                            real_conf = 0.85
-
-                        # Pattern-based scoring (highest wins):
-                        # 100 = exact full Indian plate format
-                        # 50  = starts with valid state prefix + right length (7-11)
-                        # 20  = starts with 2 alpha + digit (partial match)
-                        # 5   = any 4+ char alphanumeric
-                        score = 5
-                        if FULL_PLATE_RE.match(clean_str) or BH_PLATE_RE.match(clean_str):
-                            score = 100
-                        elif PREFIX_RE.match(clean_str) and 7 <= len(clean_str) <= 11:
-                            score = 50
-                        elif PREFIX_RE.match(clean_str):
-                            score = 20
+                            real_conf = base_conf
 
                         candidates.append((score, real_conf, clean_str))
                     except Exception:
